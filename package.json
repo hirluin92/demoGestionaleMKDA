@@ -1,0 +1,48 @@
+{
+  "name": "hugemass-booking",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "seed:admin": "tsx scripts/seed-admin.ts",
+    "setup:calendar": "tsx scripts/setup-google-calendar.ts",
+    "fix:password": "tsx scripts/fix-user-password.ts"
+  },
+  "dependencies": {
+    "next": "14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@prisma/client": "^5.19.1",
+    "next-auth": "^4.24.7",
+    "bcryptjs": "^2.4.3",
+    "zod": "^3.23.8",
+    "date-fns": "^3.6.0",
+    "googleapis": "^144.0.0",
+    "twilio": "^5.3.5",
+    "react-calendar": "^5.0.0",
+    "lucide-react": "^0.427.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.2",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.12",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/bcryptjs": "^2.4.6",
+    "typescript": "^5.5.4",
+    "prisma": "^5.19.1",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "14.2.5",
+    "tailwindcss": "^3.4.7",
+    "postcss": "^8.4.40",
+    "autoprefixer": "^10.4.20",
+    "tsx": "^4.16.2"
+  }
+}

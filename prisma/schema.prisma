@@ -1,0 +1,84 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  phone         String?
+  role          UserRole  @default(CLIENT)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  packages      Package[]
+  bookings      Booking[]
+  
+  @@map("users")
+}
+
+enum UserRole {
+  CLIENT
+  ADMIN
+}
+
+model Package {
+  id            String    @id @default(cuid())
+  userId        String
+  name          String
+  totalSessions Int
+  usedSessions  Int       @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings      Booking[]
+  
+  @@map("packages")
+}
+
+model Booking {
+  id            String    @id @default(cuid())
+  userId        String
+  packageId     String
+  date          DateTime
+  time          String    // Format: "HH:mm"
+  status        BookingStatus @default(CONFIRMED)
+  googleEventId String?   @unique
+  reminderSent  Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package        Package   @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  
+  @@map("bookings")
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model GoogleCalendar {
+  id            String    @id @default(cuid())
+  calendarId    String    @unique
+  accessToken   String
+  refreshToken  String
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@map("google_calendars")
+}

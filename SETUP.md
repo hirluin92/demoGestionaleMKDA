@@ -96,25 +96,41 @@ npm run seed:admin
 3. Tipo applicazione: "Applicazione web"
 4. Nome: "Hugemass Web Client"
 5. URI di reindirizzamento autorizzati:
-   - `http://localhost:3000/api/auth/callback/google` (sviluppo)
+   - `urn:ietf:wg:oauth:2.0:oob` (per ottenere token senza server - USA QUESTO)
+   - `http://localhost:3000/api/auth/callback/google` (solo se usi NextAuth con Google)
    - `https://tuo-dominio.com/api/auth/callback/google` (produzione)
 6. Clicca "Crea"
 7. Copia **ID client** e **Secret client**
 
+**⚠️ IMPORTANTE**: Aggiungi `urn:ietf:wg:oauth:2.0:oob` come redirect URI se vuoi usare lo script `get-google-tokens.js` senza avviare il server!
+
 ### Step 4: Ottieni Token OAuth
 
-**Metodo 1: Usa Google OAuth Playground (Più Semplice)**
+**⚠️ IMPORTANTE: Per ottenere un refresh token PERMANENTE, devi usare `access_type: 'offline'`!**
+
+**Metodo 1: Script Node.js (CONSIGLIATO - Garantisce refresh token permanente)**
+
+1. Assicurati di avere `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` nel file `.env`
+2. Esegui lo script:
+   ```bash
+   node scripts/get-google-tokens.js
+   ```
+3. Segui le istruzioni: copia l'URL, autorizza, incolla il codice
+4. Lo script ti darà i token da aggiungere al `.env`
+
+**Metodo 2: Google OAuth Playground (Alternativa)**
 
 1. Vai su https://developers.google.com/oauthplayground/
 2. In alto a destra, clicca l'icona ⚙️
 3. Spunta "Use your own OAuth credentials"
 4. Inserisci il tuo Client ID e Client Secret
-5. Nella lista a sinistra, cerca "Calendar API v3"
-6. Seleziona: `https://www.googleapis.com/auth/calendar`
-7. Clicca "Authorize APIs"
-8. Accedi con il tuo account Google
-9. Clicca "Exchange authorization code for tokens"
-10. Copia `access_token` e `refresh_token`
+5. **IMPORTANTE**: Spunta anche "Force approval prompt" (per ottenere sempre il refresh token)
+6. Nella lista a sinistra, cerca "Calendar API v3"
+7. Seleziona: `https://www.googleapis.com/auth/calendar`
+8. Clicca "Authorize APIs"
+9. Accedi con il tuo account Google
+10. Clicca "Exchange authorization code for tokens"
+11. Copia `access_token` e `refresh_token`
 
 **Metodo 2: Script Node.js**
 
@@ -201,7 +217,9 @@ TWILIO_AUTH_TOKEN="il-tuo-auth-token"
 TWILIO_WHATSAPP_FROM="whatsapp:+14155238886"  # Numero Twilio Sandbox
 ```
 
-**Nota**: Per produzione, dovrai richiedere un numero WhatsApp verificato a Twilio.
+**⚠️ IMPORTANTE**: Twilio Sandbox è solo per **test**. Per produzione, devi richiedere **Twilio WhatsApp Business API**. 
+
+Vedi `SETUP_TWILIO_PRODUCTION.md` per la guida completa alla migrazione.
 
 ## ⏰ 6. Cron Job per Promemoria
 

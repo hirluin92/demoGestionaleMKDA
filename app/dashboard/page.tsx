@@ -21,6 +21,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const [packages, setPackages] = useState<Package[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -46,6 +47,12 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleBookingSuccess = () => {
+    fetchPackages()
+    // Force refresh della lista prenotazioni
+    setRefreshKey(prev => prev + 1)
   }
 
   if (status === 'loading' || loading) {
@@ -179,7 +186,7 @@ export default function DashboardPage() {
         {totalRemainingSessions > 0 ? (
           <div className="bg-white rounded-lg shadow p-6 mb-8">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">Nuova Prenotazione</h3>
-            <BookingForm onSuccess={fetchPackages} packages={activePackages} />
+            <BookingForm onSuccess={handleBookingSuccess} packages={activePackages} />
           </div>
         ) : (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8">
@@ -192,7 +199,7 @@ export default function DashboardPage() {
         {/* Lista Prenotazioni */}
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-xl font-semibold text-gray-900 mb-4">Le Tue Prenotazioni</h3>
-          <BookingsList onCancel={fetchPackages} />
+          <BookingsList key={refreshKey} onCancel={handleBookingSuccess} />
         </div>
       </main>
     </div>

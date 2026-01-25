@@ -23,9 +23,26 @@ interface BookingsListProps {
 export default function BookingsList({ onCancel, showCountOnly }: BookingsListProps) {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     fetchBookings()
+  }, [])
+
+  // Ascolta eventi di refresh (da BookingForm o cancellazioni)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handleRefresh = () => {
+        fetchBookings()
+      }
+      window.addEventListener('booking-created', handleRefresh)
+      window.addEventListener('booking-cancelled', handleRefresh)
+      return () => {
+        window.removeEventListener('booking-created', handleRefresh)
+        window.removeEventListener('booking-cancelled', handleRefresh)
+      }
+    }
   }, [])
 
   const fetchBookings = async () => {
@@ -42,27 +59,39 @@ export default function BookingsList({ onCancel, showCountOnly }: BookingsListPr
     }
   }
 
-  const handleCancel = async (bookingId: string) => {
-    if (!confirm('Sei sicuro di voler cancellare questa prenotazione?')) {
-      return
-    }
+  const handleCancelClick = (bookingId: string) => {
+    setConfirmingDelete(bookingId)
+  }
 
+  const handleConfirmDelete = async (bookingId: string) => {
+    setIsDeleting(true)
+    
     try {
       const response = await fetch(`/api/bookings/${bookingId}`, {
         method: 'DELETE',
       })
 
-      if (response.ok) {
-        fetchBookings()
-        if (onCancel) {
-          onCancel()
-        }
-      } else {
-        alert('Errore nella cancellazione della prenotazione')
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Errore nella cancellazione')
       }
+
+      fetchBookings()
+      if (onCancel) {
+        onCancel()
+      }
+      
+      // Trigger evento per aggiornare altri componenti
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('booking-cancelled'))
+      }
+      
+      setConfirmingDelete(null)
+      
     } catch (error) {
-      console.error('Errore cancellazione:', error)
-      alert('Errore nella cancellazione della prenotazione')
+      alert(error instanceof Error ? error.message : 'Errore nella cancellazione della prenotazione')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -118,13 +147,42 @@ export default function BookingsList({ onCancel, showCountOnly }: BookingsListPr
                     </div>
                   </div>
                   {!isPast && (
-                    <button
-                      onClick={() => handleCancel(booking.id)}
-                      className="text-red-600 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Cancella prenotazione"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
+                    <div>
+                      {confirmingDelete === booking.id ? (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                          <p className="text-sm font-medium text-yellow-800 mb-2">
+                            ⚠️ Confermi la cancellazione?
+                          </p>
+                          <p className="text-xs text-yellow-700 mb-3">
+                            La sessione verrà restituita al tuo pacchetto.
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleConfirmDelete(booking.id)}
+                              disabled={isDeleting}
+                              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            >
+                              {isDeleting ? 'Cancellazione...' : 'Sì, cancella'}
+                            </button>
+                            <button
+                              onClick={() => setConfirmingDelete(null)}
+                              disabled={isDeleting}
+                              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-300 disabled:opacity-50"
+                            >
+                              Annulla
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleCancelClick(booking.id)}
+                          className="text-red-600 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Cancella prenotazione"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               )

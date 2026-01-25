@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendWhatsAppMessage, formatBookingReminderMessage } from '@/lib/whatsapp'
+import { logger } from '@/lib/logger'
 
 // API route per inviare promemoria (da chiamare con cron job)
 export async function GET(request: NextRequest) {
@@ -14,23 +15,26 @@ export async function GET(request: NextRequest) {
     // Se non è Vercel Cron, verifica CRON_SECRET
     if (!isVercelCron) {
       if (!authHeader || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        logger.warn('Tentativo accesso non autorizzato a /api/reminders')
         return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
       }
     }
 
-    // Trova prenotazioni tra 55 e 65 minuti da ora
+    logger.info('🔔 Inizio processo invio promemoria')
+
+    // Trova prenotazioni tra 50 minuti e 70 minuti da ora
+    // (finestra più ampia per tollerare ritardi del cron)
     const now = new Date()
-    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000)
-    const fiveMinutesBefore = new Date(now.getTime() + 55 * 60 * 1000)
-    const fiveMinutesAfter = new Date(now.getTime() + 65 * 60 * 1000)
+    const minTime = new Date(now.getTime() + 50 * 60 * 1000)
+    const maxTime = new Date(now.getTime() + 70 * 60 * 1000)
 
     const bookings = await prisma.booking.findMany({
       where: {
         status: 'CONFIRMED',
         reminderSent: false,
         date: {
-          gte: fiveMinutesBefore,
-          lte: fiveMinutesAfter,
+          gte: minTime,
+          lte: maxTime,
         },
       },
       include: {
@@ -38,10 +42,18 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    logger.info(`Trovate ${bookings.length} prenotazioni per promemoria`)
+
+    let successCount = 0
+    let errorCount = 0
     const results = []
 
     for (const booking of bookings) {
       if (!booking.user.phone) {
+        logger.warn('Booking senza telefono', { 
+          bookingId: booking.id,
+          userId: booking.user.id 
+        })
         continue
       }
 
@@ -55,25 +67,56 @@ export async function GET(request: NextRequest) {
           )
         )
 
-        // Segna come inviato
+        // Marca come inviato
         await prisma.booking.update({
           where: { id: booking.id },
           data: { reminderSent: true },
         })
 
+        successCount++
         results.push({ bookingId: booking.id, status: 'sent' })
+        
+        logger.info('Promemoria inviato', { 
+          bookingId: booking.id,
+          phone: booking.user.phone 
+        })
+
       } catch (error) {
-        console.error(`Errore invio promemoria per prenotazione ${booking.id}:`, error)
-        results.push({ bookingId: booking.id, status: 'error', error: String(error) })
+        errorCount++
+        const errorMsg = error instanceof Error ? error.message : String(error)
+        
+        logger.error('Errore invio promemoria', {
+          bookingId: booking.id,
+          error: errorMsg
+        })
+        
+        results.push({ 
+          bookingId: booking.id, 
+          status: 'error',
+          error: errorMsg
+        })
       }
     }
 
+    logger.info('✅ Processo promemoria completato', {
+      total: bookings.length,
+      success: successCount,
+      errors: errorCount
+    })
+
     return NextResponse.json({
       processed: bookings.length,
+      success: successCount,
+      errors: errorCount,
       results,
+      timestamp: new Date()
     })
+    
   } catch (error) {
-    console.error('Errore processo promemoria:', error)
+    logger.error('Errore critico nel processo promemoria', {
+      error: error instanceof Error ? error.message : String(error)
+    })
+    
     return NextResponse.json(
       { error: 'Errore nel processo promemoria' },
       { status: 500 }

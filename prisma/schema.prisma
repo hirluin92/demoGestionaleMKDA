@@ -37,6 +37,7 @@ model Package {
   name          String
   totalSessions Int
   usedSessions  Int       @default(0)
+  durationMinutes Int     @default(60)  // Durata sessione in minuti (default 60 = 1 ora)
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

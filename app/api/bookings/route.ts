@@ -2,14 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { createCalendarEvent, deleteCalendarEvent } from '@/lib/google-calendar'
+import { createCalendarEvent } from '@/lib/google-calendar'
 import { sendWhatsAppMessage, formatBookingConfirmationMessage } from '@/lib/whatsapp'
+import { bookingRateLimiter } from '@/lib/rate-limit'
 import { z } from 'zod'
 
 const bookingSchema = z.object({
-  date: z.string(),
-  time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
-  packageId: z.string(),
+  date: z.string()
+    .refine((dateStr) => {
+      const bookingDate = new Date(dateStr)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      return bookingDate >= today && !isNaN(bookingDate.getTime())
+    }, 'Data non valida o nel passato'),
+    
+  time: z.string()
+    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Formato orario non valido')
+    .refine((time) => {
+      const [hours] = time.split(':').map(Number)
+      return hours >= 8 && hours < 20
+    }, 'Orario non valido (8:00-20:00)'),
+    
+  packageId: z.string().min(1, 'Package ID richiesto'),
 })
 
 // GET - Lista prenotazioni utente
@@ -53,10 +67,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { date, time, packageId } = bookingSchema.parse(body)
+    // Rate limiting
+    const rateLimitResult = await bookingRateLimiter.check(session.user.id)
+    
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Troppe richieste. Riprova tra qualche minuto.',
+          retryAfter: rateLimitResult.reset
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitResult.reset.toISOString(),
+          }
+        }
+      )
+    }
 
-    // Verifica che il pacchetto appartenga all'utente
+    // Valida input
+    const body = await request.json()
+    const validatedData = bookingSchema.parse(body)
+    const { date, time, packageId } = validatedData
+
+    // STEP 1: Verifica preliminare pacchetto (fuori transazione) - serve per durata
     const packageData = await prisma.package.findFirst({
       where: {
         id: packageId,
@@ -72,7 +108,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verifica sessioni residue
+    // Prepara date usando la durata del package
+    const bookingDate = new Date(date)
+    const [hours, minutes] = time.split(':').map(Number)
+    bookingDate.setHours(hours, minutes, 0, 0)
+    const endDate = new Date(bookingDate)
+    endDate.setMinutes(endDate.getMinutes() + (packageData.durationMinutes || 60)) // Usa durata del package, default 60 min
+
     const remainingSessions = packageData.totalSessions - packageData.usedSessions
     if (remainingSessions <= 0) {
       return NextResponse.json(
@@ -81,15 +123,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Crea date per l'evento
-    const bookingDate = new Date(date)
-    const [hours, minutes] = time.split(':').map(Number)
-    bookingDate.setHours(hours, minutes, 0, 0)
-
-    const endDate = new Date(bookingDate)
-    endDate.setHours(endDate.getHours() + 1) // Sessione di 1 ora
-
-    // Crea evento su Google Calendar
+    // STEP 2: Crea Google Calendar event PRIMA della transazione (opzionale)
     let googleEventId: string | null = null
     try {
       googleEventId = await createCalendarEvent(
@@ -98,55 +132,94 @@ export async function POST(request: NextRequest) {
         bookingDate,
         endDate
       )
+      console.log('✅ Evento Google Calendar creato:', googleEventId)
     } catch (error) {
-      console.error('Errore creazione evento Google Calendar:', error)
-      // Continua comunque senza Google Calendar
+      console.error('⚠️ Errore creazione evento Google Calendar (continua senza):', error)
+      // Continua senza Google Calendar - la prenotazione viene comunque creata
+      // L'utente può sincronizzare manualmente dopo
     }
 
-    // Crea prenotazione
-    const booking = await prisma.booking.create({
-      data: {
-        userId: session.user.id,
-        packageId,
-        date: bookingDate,
-        time,
-        googleEventId,
-        status: 'CONFIRMED',
-      },
-    })
-
-    // Scala una sessione
-    await prisma.package.update({
-      where: { id: packageId },
-      data: {
-        usedSessions: {
-          increment: 1,
+    // STEP 3: Transazione atomica per DB (booking + package update)
+    const booking = await prisma.$transaction(async (tx) => {
+      // Verifica slot non duplicato (dentro transazione per lock)
+      const existingBooking = await tx.booking.findFirst({
+        where: {
+          date: bookingDate,
+          time: time,
+          status: 'CONFIRMED',
         },
-      },
+      })
+
+      if (existingBooking) {
+        throw new Error('Questo orario è già stato prenotato')
+      }
+
+      // Ricontrolla sessioni disponibili (dentro transazione per evitare race)
+      const pkg = await tx.package.findUnique({
+        where: { id: packageId },
+        select: { totalSessions: true, usedSessions: true, isActive: true }
+      })
+
+      if (!pkg || !pkg.isActive) {
+        throw new Error('Pacchetto non più valido')
+      }
+
+      if ((pkg.totalSessions - pkg.usedSessions) <= 0) {
+        throw new Error('Sessioni terminate durante l\'elaborazione')
+      }
+
+      // Crea booking
+      const newBooking = await tx.booking.create({
+        data: {
+          userId: session.user.id,
+          packageId,
+          date: bookingDate,
+          time,
+          googleEventId,
+          status: 'CONFIRMED',
+        },
+      })
+
+      // Scala sessione
+      await tx.package.update({
+        where: { id: packageId },
+        data: {
+          usedSessions: {
+            increment: 1,
+          },
+        },
+      })
+
+      return newBooking
     })
 
-    // Invia WhatsApp di conferma
+    // STEP 4: WhatsApp (fuori transazione - non critico)
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
     })
 
     if (user?.phone) {
       try {
-        console.log('Tentativo invio WhatsApp a:', user.phone)
         await sendWhatsAppMessage(
           user.phone,
           formatBookingConfirmationMessage(user.name, bookingDate, time)
         )
-        console.log('✅ WhatsApp inviato con successo')
-      } catch (error) {
-        console.error('❌ Errore invio WhatsApp:', error)
-        // Non bloccare la prenotazione se WhatsApp fallisce
+        console.log(`✅ WhatsApp inviato con successo a ${user.name} (${user.phone})`)
+      } catch (error: any) {
+        console.error(`⚠️ Errore invio WhatsApp a ${user.name} (${user.phone}):`, error.message)
+        if (error.code === 21608) {
+          console.error(`   🔴 NUMERO NON AUTORIZZATO su Twilio Sandbox!`)
+          console.error(`   Soluzione: Aggiungi ${user.phone} alla lista numeri autorizzati su Twilio Console`)
+        } else if (error.code === 21211) {
+          console.error(`   🔴 NUMERO NON VALIDO per Twilio!`)
+        }
       }
     } else {
-      console.log('⚠️ Utente senza numero di telefono, WhatsApp non inviato')
+      console.warn(`⚠️ Utente ${user?.name || session.user.id} non ha un numero di telefono configurato`)
     }
 
     return NextResponse.json(booking, { status: 201 })
+    
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -155,9 +228,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.error('Errore creazione prenotazione:', error)
+    console.error('❌ Errore creazione prenotazione:', error)
+    
     return NextResponse.json(
-      { error: 'Errore nella creazione della prenotazione' },
+      { 
+        error: error instanceof Error ? error.message : 'Errore nella creazione della prenotazione' 
+      },
       { status: 500 }
     )
   }

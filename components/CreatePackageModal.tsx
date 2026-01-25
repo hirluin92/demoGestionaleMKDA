@@ -20,6 +20,7 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
     userId: '',
     name: '',
     totalSessions: 10,
+    durationMinutes: 60, // Default 60 minuti (1 ora)
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -54,6 +55,7 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
         body: JSON.stringify({
           ...formData,
           totalSessions: Number(formData.totalSessions),
+          durationMinutes: Number(formData.durationMinutes),
         }),
       })
 
@@ -140,6 +142,26 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
               min="1"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
+          </div>
+
+          <div>
+            <label htmlFor="durationMinutes" className="block text-sm font-medium text-gray-700 mb-1">
+              Durata Sessione (minuti) *
+            </label>
+            <input
+              id="durationMinutes"
+              type="number"
+              value={formData.durationMinutes}
+              onChange={(e) => setFormData({ ...formData, durationMinutes: parseInt(e.target.value) || 60 })}
+              required
+              min="15"
+              step="15"
+              placeholder="60"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Durata di ogni sessione in minuti (es: 60 = 1 ora, 90 = 1.5 ore, 120 = 2 ore)
+            </p>
           </div>
 
           <div className="flex space-x-3 pt-4">

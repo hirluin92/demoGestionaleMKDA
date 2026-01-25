@@ -6,10 +6,24 @@ import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 
 const createUserSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-  name: z.string().min(1),
-  phone: z.string().optional(),
+  email: z.string()
+    .email('Email non valida')
+    .toLowerCase(),
+    
+  password: z.string()
+    .min(8, 'La password deve essere di almeno 8 caratteri')
+    .regex(/[A-Z]/, 'La password deve contenere almeno una lettera maiuscola')
+    .regex(/[a-z]/, 'La password deve contenere almeno una lettera minuscola')
+    .regex(/[0-9]/, 'La password deve contenere almeno un numero'),
+    
+  name: z.string()
+    .min(2, 'Il nome deve essere di almeno 2 caratteri')
+    .max(100, 'Il nome è troppo lungo')
+    .trim(),
+    
+  phone: z.string()
+    .regex(/^\+[1-9]\d{1,14}$/, 'Formato telefono non valido. Usa formato internazionale: +39XXXXXXXXXX')
+    .optional(),
 })
 
 // GET - Lista tutti gli utenti (solo admin)

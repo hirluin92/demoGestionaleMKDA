@@ -12,7 +12,11 @@
     "db:studio": "prisma studio",
     "seed:admin": "tsx scripts/seed-admin.ts",
     "setup:calendar": "tsx scripts/setup-google-calendar.ts",
-    "fix:password": "tsx scripts/fix-user-password.ts"
+    "fix:password": "tsx scripts/fix-user-password.ts",
+    "check:calendar": "tsx scripts/check-google-calendar-sync.ts",
+    "check:token": "tsx scripts/check-google-token.ts",
+    "check:whatsapp": "tsx scripts/check-whatsapp-user.ts",
+    "list:users": "tsx scripts/list-users-whatsapp.ts"
   },
   "dependencies": {
     "next": "14.2.5",

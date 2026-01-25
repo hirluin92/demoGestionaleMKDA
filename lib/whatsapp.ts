@@ -32,16 +32,34 @@ export async function sendWhatsAppMessage(
 ) {
   try {
     const normalizedPhone = normalizePhoneNumber(to)
-    console.log(`Invio WhatsApp a: ${normalizedPhone} (originale: ${to})`)
+    console.log(`📱 Invio WhatsApp a: ${normalizedPhone} (originale: ${to})`)
     
     const result = await client.messages.create({
       from: process.env.TWILIO_WHATSAPP_FROM!,
       to: `whatsapp:${normalizedPhone}`,
       body: message,
     })
+    
+    console.log(`✅ WhatsApp inviato con successo a ${normalizedPhone} (SID: ${result.sid})`)
     return result
-  } catch (error) {
-    console.error('Errore invio WhatsApp:', error)
+  } catch (error: any) {
+    const normalizedPhone = normalizePhoneNumber(to)
+    console.error(`❌ Errore invio WhatsApp a ${normalizedPhone}:`, error.message)
+    
+    // Log dettagliato per errori comuni
+    if (error.code === 21211) {
+      console.error('   🔴 Numero non valido per Twilio')
+      console.error('   Possibili cause: numero non registrato su WhatsApp o formato errato')
+    } else if (error.code === 21608) {
+      console.error('   🔴 Numero non autorizzato per Twilio Sandbox')
+      console.error('   Soluzione: aggiungi il numero alla lista autorizzati su Twilio')
+    } else if (error.code === 21408) {
+      console.error('   🔴 Numero di destinazione non valido')
+    } else {
+      console.error('   Codice errore:', error.code)
+      console.error('   Dettagli:', error)
+    }
+    
     throw error
   }
 }

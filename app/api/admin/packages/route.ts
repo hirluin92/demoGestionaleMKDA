@@ -8,6 +8,7 @@ const createPackageSchema = z.object({
   userId: z.string(),
   name: z.string().min(1),
   totalSessions: z.number().int().positive(),
+  durationMinutes: z.number().int().positive().optional().default(60), // Default 60 minuti
 })
 
 // GET - Lista tutti i pacchetti (solo admin)
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { userId, name, totalSessions } = createPackageSchema.parse(body)
+    const { userId, name, totalSessions, durationMinutes } = createPackageSchema.parse(body)
 
     // Verifica che l'utente esista
     const user = await prisma.user.findUnique({
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
         userId,
         name,
         totalSessions,
+        durationMinutes: durationMinutes || 60, // Default 60 minuti se non specificato
         usedSessions: 0,
         isActive: true,
       },

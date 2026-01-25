@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { createCalendarEvent } from '@/lib/google-calendar'
 import { sendWhatsAppMessage, formatBookingConfirmationMessage } from '@/lib/whatsapp'
 import { bookingRateLimiter } from '@/lib/rate-limit'
+import { isTwilioError } from '@/lib/errors'
+import { handleApiError } from '@/lib/api-response'
 import { z } from 'zod'
 
 const bookingSchema = z.object({
@@ -126,12 +128,13 @@ export async function POST(request: NextRequest) {
     // STEP 2: Crea Google Calendar event PRIMA della transazione (opzionale)
     let googleEventId: string | null = null
     try {
-      googleEventId = await createCalendarEvent(
+      const eventId = await createCalendarEvent(
         `Sessione ${session.user.name}`,
         `Prenotazione Hugemass - Pacchetto: ${packageData.name}`,
         bookingDate,
         endDate
       )
+      googleEventId = eventId
       console.log('✅ Evento Google Calendar creato:', googleEventId)
     } catch (error) {
       console.error('⚠️ Errore creazione evento Google Calendar (continua senza):', error)
@@ -205,13 +208,19 @@ export async function POST(request: NextRequest) {
           formatBookingConfirmationMessage(user.name, bookingDate, time)
         )
         console.log(`✅ WhatsApp inviato con successo a ${user.name} (${user.phone})`)
-      } catch (error: any) {
-        console.error(`⚠️ Errore invio WhatsApp a ${user.name} (${user.phone}):`, error.message)
-        if (error.code === 21608) {
-          console.error(`   🔴 NUMERO NON AUTORIZZATO su Twilio Sandbox!`)
-          console.error(`   Soluzione: Aggiungi ${user.phone} alla lista numeri autorizzati su Twilio Console`)
-        } else if (error.code === 21211) {
-          console.error(`   🔴 NUMERO NON VALIDO per Twilio!`)
+      } catch (error) {
+        if (isTwilioError(error)) {
+          console.error(`⚠️ Errore Twilio invio WhatsApp a ${user.name} (${user.phone}):`, error.message)
+          if (error.code === 21608) {
+            console.error(`   🔴 NUMERO NON AUTORIZZATO su Twilio Sandbox!`)
+            console.error(`   Soluzione: Aggiungi ${user.phone} alla lista numeri autorizzati su Twilio Console`)
+          } else if (error.code === 21211) {
+            console.error(`   🔴 NUMERO NON VALIDO per Twilio!`)
+          }
+        } else if (error instanceof Error) {
+          console.error(`⚠️ Errore generico invio WhatsApp a ${user.name} (${user.phone}):`, error.message)
+        } else {
+          console.error(`⚠️ Errore sconosciuto invio WhatsApp a ${user.name} (${user.phone}):`, String(error))
         }
       }
     } else {
@@ -221,20 +230,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(booking, { status: 201 })
     
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Dati non validi', details: error.errors },
-        { status: 400 }
-      )
-    }
-
-    console.error('❌ Errore creazione prenotazione:', error)
-    
-    return NextResponse.json(
-      { 
-        error: error instanceof Error ? error.message : 'Errore nella creazione della prenotazione' 
-      },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }

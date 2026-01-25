@@ -62,13 +62,20 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || 'Errore nella creazione del pacchetto')
+        const errorMessages: Record<number, string> = {
+          400: data.details 
+            ? `Dati non validi: ${data.details.map((d: any) => d.message).join(', ')}`
+            : data.error || 'Verifica i dati inseriti',
+          404: 'Cliente non trovato',
+          500: 'Errore del server. Riprova tra qualche minuto.',
+        }
+        setError(errorMessages[response.status] || data.error || 'Errore nella creazione del pacchetto')
         return
       }
 
       onSuccess()
     } catch (error) {
-      setError('Errore nella creazione del pacchetto')
+      setError('Impossibile connettersi al server. Verifica la connessione.')
     } finally {
       setLoading(false)
     }

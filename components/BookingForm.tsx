@@ -65,7 +65,18 @@ export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || 'Errore nella prenotazione')
+        // Messaggi specifici per status code
+        const errorMessages: Record<number, string> = {
+          400: data.details 
+            ? `Dati non validi: ${data.details.map((d: any) => d.message).join(', ')}`
+            : 'Verifica data e orario',
+          404: 'Pacchetto non trovato. Ricarica la pagina.',
+          409: 'Questo orario è già stato prenotato',
+          429: 'Troppe richieste. Attendi un minuto.',
+          500: 'Errore del server. Riprova tra qualche minuto.',
+        }
+        
+        setError(errorMessages[response.status] || data.error || 'Errore nella prenotazione')
         return
       }
 
@@ -85,7 +96,7 @@ export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
 
       setTimeout(() => setSuccess(false), 3000)
     } catch (error) {
-      setError('Errore nella prenotazione')
+      setError('Impossibile connettersi al server. Verifica la connessione e riprova.')
     } finally {
       setLoading(false)
     }

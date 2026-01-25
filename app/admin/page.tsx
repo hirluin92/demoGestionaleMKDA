@@ -9,6 +9,7 @@ import AdminUsersList from '@/components/AdminUsersList'
 import AdminPackagesList from '@/components/AdminPackagesList'
 import CreateUserModal from '@/components/CreateUserModal'
 import CreatePackageModal from '@/components/CreatePackageModal'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 export default function AdminPage() {
   const { data: session, status } = useSession()
@@ -41,8 +42,9 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50">
+        <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">
@@ -152,5 +154,6 @@ export default function AdminPage() {
         />
       )}
     </div>
+    </ErrorBoundary>
   )
 }

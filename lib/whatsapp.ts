@@ -1,9 +1,13 @@
 import twilio from 'twilio'
+import { env } from './env'
+import { isTwilioError } from './errors'
 
-const client = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-)
+// Inizializza client Twilio solo se configurato
+let client: ReturnType<typeof twilio> | null = null
+
+if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
+  client = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN)
+}
 
 function normalizePhoneNumber(phone: string): string {
   // Rimuovi spazi e caratteri speciali
@@ -30,34 +34,47 @@ export async function sendWhatsAppMessage(
   to: string,
   message: string
 ) {
+  // Check se Twilio è configurato
+  if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN || !env.TWILIO_WHATSAPP_FROM || !client) {
+    console.warn('⚠️ Twilio non configurato, skip invio WhatsApp')
+    return null
+  }
+
   try {
     const normalizedPhone = normalizePhoneNumber(to)
     console.log(`📱 Invio WhatsApp a: ${normalizedPhone} (originale: ${to})`)
     
     const result = await client.messages.create({
-      from: process.env.TWILIO_WHATSAPP_FROM!,
+      from: env.TWILIO_WHATSAPP_FROM,
       to: `whatsapp:${normalizedPhone}`,
       body: message,
     })
     
     console.log(`✅ WhatsApp inviato con successo a ${normalizedPhone} (SID: ${result.sid})`)
     return result
-  } catch (error: any) {
+  } catch (error) {
     const normalizedPhone = normalizePhoneNumber(to)
-    console.error(`❌ Errore invio WhatsApp a ${normalizedPhone}:`, error.message)
     
-    // Log dettagliato per errori comuni
-    if (error.code === 21211) {
-      console.error('   🔴 Numero non valido per Twilio')
-      console.error('   Possibili cause: numero non registrato su WhatsApp o formato errato')
-    } else if (error.code === 21608) {
-      console.error('   🔴 Numero non autorizzato per Twilio Sandbox')
-      console.error('   Soluzione: aggiungi il numero alla lista autorizzati su Twilio')
-    } else if (error.code === 21408) {
-      console.error('   🔴 Numero di destinazione non valido')
+    if (isTwilioError(error)) {
+      console.error(`❌ Errore Twilio invio WhatsApp a ${normalizedPhone}:`, error.message)
+      
+      // Log dettagliato per errori comuni
+      if (error.code === 21211) {
+        console.error('   🔴 Numero non valido per Twilio')
+        console.error('   Possibili cause: numero non registrato su WhatsApp o formato errato')
+      } else if (error.code === 21608) {
+        console.error('   🔴 Numero non autorizzato per Twilio Sandbox')
+        console.error('   Soluzione: aggiungi il numero alla lista autorizzati su Twilio')
+      } else if (error.code === 21408) {
+        console.error('   🔴 Numero di destinazione non valido')
+      } else {
+        console.error('   Codice errore:', error.code)
+        console.error('   Dettagli:', error)
+      }
+    } else if (error instanceof Error) {
+      console.error(`❌ Errore generico invio WhatsApp a ${normalizedPhone}:`, error.message)
     } else {
-      console.error('   Codice errore:', error.code)
-      console.error('   Dettagli:', error)
+      console.error(`❌ Errore sconosciuto invio WhatsApp a ${normalizedPhone}:`, String(error))
     }
     
     throw error

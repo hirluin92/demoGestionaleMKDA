@@ -7,6 +7,7 @@ import { signOut } from 'next-auth/react'
 import { Calendar, Package, Clock, LogOut } from 'lucide-react'
 import BookingForm from '@/components/BookingForm'
 import BookingsList from '@/components/BookingsList'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 interface Package {
   id: string
@@ -77,8 +78,9 @@ export default function DashboardPage() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50">
+        <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">
@@ -203,5 +205,6 @@ export default function DashboardPage() {
         </div>
       </main>
     </div>
+    </ErrorBoundary>
   )
 }

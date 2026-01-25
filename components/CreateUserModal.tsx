@@ -35,13 +35,20 @@ export default function CreateUserModal({ onClose, onSuccess }: CreateUserModalP
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || 'Errore nella creazione del cliente')
+        const errorMessages: Record<number, string> = {
+          400: data.details 
+            ? `Dati non validi: ${data.details.map((d: any) => d.message).join(', ')}`
+            : data.error || 'Verifica i dati inseriti',
+          409: 'Un cliente con questa email esiste già',
+          500: 'Errore del server. Riprova tra qualche minuto.',
+        }
+        setError(errorMessages[response.status] || data.error || 'Errore nella creazione del cliente')
         return
       }
 
       onSuccess()
     } catch (error) {
-      setError('Errore nella creazione del cliente')
+      setError('Impossibile connettersi al server. Verifica la connessione.')
     } finally {
       setLoading(false)
     }

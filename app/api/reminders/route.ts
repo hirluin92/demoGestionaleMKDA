@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendWhatsAppMessage, formatBookingReminderMessage } from '@/lib/whatsapp'
 import { logger } from '@/lib/logger'
+import { env } from '@/lib/env'
 
 // API route per inviare promemoria (da chiamare con cron job)
 export async function GET(request: NextRequest) {
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     
     // Se non è Vercel Cron, verifica CRON_SECRET
     if (!isVercelCron) {
-      if (!authHeader || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      if (!env.CRON_SECRET || !authHeader || authHeader !== `Bearer ${env.CRON_SECRET}`) {
         logger.warn('Tentativo accesso non autorizzato a /api/reminders')
         return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
       }

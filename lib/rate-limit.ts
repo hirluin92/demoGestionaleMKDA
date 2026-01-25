@@ -63,14 +63,16 @@ class InMemoryRateLimiter {
   }
 }
 
-// Rate limiter per API bookings (10 richieste ogni 60 secondi)
+import { APP_CONFIG } from './config'
+
+// Rate limiter per API bookings
 export const bookingRateLimiter = new InMemoryRateLimiter({
-  windowMs: 60 * 1000, // 1 minuto
-  maxRequests: 10
+  windowMs: APP_CONFIG.rateLimit.bookings.windowMs,
+  maxRequests: APP_CONFIG.rateLimit.bookings.maxRequests
 })
 
-// Rate limiter per login (5 tentativi ogni 15 minuti)
+// Rate limiter per login
 export const loginRateLimiter = new InMemoryRateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minuti
-  maxRequests: 5
+  windowMs: APP_CONFIG.rateLimit.login.windowMs,
+  maxRequests: APP_CONFIG.rateLimit.login.maxRequests
 })

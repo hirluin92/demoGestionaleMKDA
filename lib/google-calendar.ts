@@ -1,7 +1,13 @@
 import { google } from 'googleapis'
 import { prisma } from './prisma'
+import { env } from './env'
+import { isGoogleCalendarError } from './errors'
 
 export async function getGoogleCalendarClient() {
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+    throw new Error('Google Calendar non configurato. Contatta l\'amministratore.')
+  }
+
   const calendarConfig = await prisma.googleCalendar.findFirst()
   
   if (!calendarConfig) {
@@ -9,8 +15,8 @@ export async function getGoogleCalendarClient() {
   }
 
   const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET
+    env.GOOGLE_CLIENT_ID,
+    env.GOOGLE_CLIENT_SECRET
   )
 
   oauth2Client.setCredentials({
@@ -52,11 +58,11 @@ export async function getGoogleCalendarClient() {
       oauth2Client.setCredentials(credentials)
       console.log('✅ Token Google Calendar rinnovato con successo')
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Errore refresh token Google Calendar:', error)
       
       // Se il refresh token è scaduto/revocato, lancia un errore specifico
-      if (error?.response?.data?.error === 'invalid_grant') {
+      if (isGoogleCalendarError(error) && error.response?.data?.error === 'invalid_grant') {
         throw new Error('Token Google Calendar scaduto o revocato. Riconfigura Google Calendar dall\'area admin.')
       }
       
@@ -74,18 +80,18 @@ export async function createCalendarEvent(
   endDateTime: Date
 ) {
   const calendar = await getGoogleCalendarClient()
-  const calendarId = process.env.GOOGLE_CALENDAR_ID
+  const calendarId = env.GOOGLE_CALENDAR_ID
 
   const event = {
     summary,
     description,
     start: {
       dateTime: startDateTime.toISOString(),
-      timeZone: 'Europe/Rome',
+      timeZone: 'Europe/Rome', // TODO: Usare APP_CONFIG.timezone
     },
     end: {
       dateTime: endDateTime.toISOString(),
-      timeZone: 'Europe/Rome',
+      timeZone: 'Europe/Rome', // TODO: Usare APP_CONFIG.timezone
     },
   }
 
@@ -94,12 +100,12 @@ export async function createCalendarEvent(
     requestBody: event,
   })
 
-  return response.data.id
+  return response.data.id || null
 }
 
 export async function deleteCalendarEvent(eventId: string) {
   const calendar = await getGoogleCalendarClient()
-  const calendarId = process.env.GOOGLE_CALENDAR_ID
+  const calendarId = env.GOOGLE_CALENDAR_ID
 
   await calendar.events.delete({
     calendarId,
@@ -109,7 +115,7 @@ export async function deleteCalendarEvent(eventId: string) {
 
 export async function getCalendarEvent(eventId: string) {
   const calendar = await getGoogleCalendarClient()
-  const calendarId = process.env.GOOGLE_CALENDAR_ID
+  const calendarId = env.GOOGLE_CALENDAR_ID
 
   try {
     const response = await calendar.events.get({
@@ -117,8 +123,8 @@ export async function getCalendarEvent(eventId: string) {
       eventId,
     })
     return response.data
-  } catch (error: any) {
-    if (error?.code === 404) {
+  } catch (error) {
+    if (isGoogleCalendarError(error) && error.code === 404) {
       return null // Evento non trovato
     }
     throw error
@@ -222,8 +228,12 @@ export async function getAvailableSlots(date: Date) {
   // STEP 2: Opzionalmente controlla Google Calendar (se disponibile)
   let occupiedSlotsFromCalendar: string[] = []
   try {
+    if (!env.GOOGLE_CLIENT_ID) {
+      // Google Calendar non configurato, skip
+      return allSlots.filter(slot => !occupiedSlotsFromDB.includes(slot))
+    }
     const calendar = await getGoogleCalendarClient()
-    const calendarId = process.env.GOOGLE_CALENDAR_ID
+    const calendarId = env.GOOGLE_CALENDAR_ID
 
     const response = await calendar.events.list({
       calendarId,

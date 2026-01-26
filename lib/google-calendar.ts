@@ -1,8 +1,24 @@
+/**
+ * Google Calendar API integration
+ * 
+ * @module lib/google-calendar
+ */
+
 import { google } from 'googleapis'
 import { prisma } from './prisma'
 import { env } from './env'
 import { isGoogleCalendarError } from './errors'
+import { APP_CONFIG } from './config'
 
+/**
+ * Gets an authenticated Google Calendar client
+ * 
+ * Automatically refreshes expired tokens (with 5-minute buffer).
+ * 
+ * @returns Authenticated Google Calendar API client
+ * @throws {Error} If Google Calendar is not configured
+ * @throws {Error} If token refresh fails
+ */
 export async function getGoogleCalendarClient() {
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
     throw new Error('Google Calendar non configurato. Contatta l\'amministratore.')
@@ -73,6 +89,25 @@ export async function getGoogleCalendarClient() {
   return google.calendar({ version: 'v3', auth: oauth2Client })
 }
 
+/**
+ * Creates a new event in Google Calendar
+ * 
+ * @param summary - Event title
+ * @param description - Event description
+ * @param startDateTime - Event start time
+ * @param endDateTime - Event end time
+ * @returns Google Calendar event ID or null if creation fails
+ * @throws {GoogleCalendarError} If event creation fails
+ * @example
+ * ```typescript
+ * const eventId = await createCalendarEvent(
+ *   'Training Session',
+ *   'Personal training with John',
+ *   new Date('2026-12-25T10:00:00'),
+ *   new Date('2026-12-25T11:00:00')
+ * )
+ * ```
+ */
 export async function createCalendarEvent(
   summary: string,
   description: string,
@@ -87,11 +122,11 @@ export async function createCalendarEvent(
     description,
     start: {
       dateTime: startDateTime.toISOString(),
-      timeZone: 'Europe/Rome', // TODO: Usare APP_CONFIG.timezone
+      timeZone: APP_CONFIG.timezone,
     },
     end: {
       dateTime: endDateTime.toISOString(),
-      timeZone: 'Europe/Rome', // TODO: Usare APP_CONFIG.timezone
+      timeZone: APP_CONFIG.timezone,
     },
   }
 
@@ -103,6 +138,12 @@ export async function createCalendarEvent(
   return response.data.id || null
 }
 
+/**
+ * Deletes an event from Google Calendar
+ * 
+ * @param eventId - Google Calendar event ID
+ * @throws {GoogleCalendarError} If deletion fails
+ */
 export async function deleteCalendarEvent(eventId: string) {
   const calendar = await getGoogleCalendarClient()
   const calendarId = env.GOOGLE_CALENDAR_ID
@@ -113,6 +154,13 @@ export async function deleteCalendarEvent(eventId: string) {
   })
 }
 
+/**
+ * Retrieves an event from Google Calendar
+ * 
+ * @param eventId - Google Calendar event ID
+ * @returns Event data or null if not found
+ * @throws {GoogleCalendarError} If retrieval fails (except 404)
+ */
 export async function getCalendarEvent(eventId: string) {
   const calendar = await getGoogleCalendarClient()
   const calendarId = env.GOOGLE_CALENDAR_ID
@@ -131,6 +179,12 @@ export async function getCalendarEvent(eventId: string) {
   }
 }
 
+/**
+ * Checks if a Google Calendar event exists
+ * 
+ * @param eventId - Google Calendar event ID
+ * @returns True if event exists, false otherwise
+ */
 export async function checkEventExists(eventId: string): Promise<boolean> {
   try {
     const event = await getCalendarEvent(eventId)
@@ -141,6 +195,12 @@ export async function checkEventExists(eventId: string): Promise<boolean> {
   }
 }
 
+/**
+ * Gets available time slots for a given date
+ * 
+ * @param date - Date to check availability
+ * @returns Array of available time slots in HH:mm format
+ */
 export async function getAvailableSlots(date: Date) {
   const { prisma } = await import('./prisma')
   

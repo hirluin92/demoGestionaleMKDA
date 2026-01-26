@@ -159,6 +159,56 @@ L'applicazione sarà disponibile su `http://localhost:3000`
 - **Twilio** - Notifiche WhatsApp
 - **Tailwind CSS** - Styling
 
+## Testing
+
+Il progetto include una suite di test per garantire la qualità del codice.
+
+### Eseguire i Test
+```bash
+# Run all tests
+npm run test
+
+# Run tests in watch mode
+npm run test
+
+# Run tests once (CI mode)
+npm run test:run
+
+# Run tests with coverage report
+npm run test:coverage
+
+# Run tests with UI
+npm run test:ui
+```
+
+### Test Coverage
+
+Il progetto include test per:
+
+- ✅ **Environment variables validation** - Verifica configurazione corretta
+- ✅ **Error type guards** - Assicura error handling robusto
+- ✅ **Booking flow integration** - Testa il flusso critico di prenotazione
+- ✅ **Database queries** - Verifica performance con indici
+- ✅ **Configuration** - Valida configurazione applicazione
+- ✅ **Logger** - Testa logging in diversi ambienti
+- ✅ **Error Boundary** - Verifica gestione errori UI
+- ✅ **Health check API** - Verifica stato servizi
+
+### Test Files
+```
+tests/
+├── env.test.ts                      # Environment validation
+├── errors.test.ts                   # Type guards
+├── booking-flow.test.ts             # Integration test critico
+├── database-performance.test.ts     # Query performance
+├── config.test.ts                   # Configuration
+├── logger.test.ts                   # Logging
+├── api/
+│   └── health.test.ts              # Health check endpoint
+└── components/
+    └── ErrorBoundary.test.tsx      # Error boundary component
+```
+
 ## Funzionalità Dettagliate
 
 ### Per i Clienti

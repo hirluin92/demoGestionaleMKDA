@@ -1,7 +1,32 @@
+/**
+ * Standardized API error response handler
+ * 
+ * @module lib/api-response
+ */
+
 import { NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import { isPrismaError, isTwilioError } from './errors'
 
+/**
+ * Handles API errors and returns appropriate NextResponse
+ * 
+ * Automatically detects error type (Zod, Prisma, Twilio) and
+ * returns user-friendly error messages with correct status codes.
+ * 
+ * @param error - The error to handle
+ * @returns NextResponse with formatted error
+ * @example
+ * ```typescript
+ * export async function POST(request: NextRequest) {
+ *   try {
+ *     // ... API logic
+ *   } catch (error) {
+ *     return handleApiError(error)
+ *   }
+ * }
+ * ```
+ */
 export function handleApiError(error: unknown) {
   // Zod validation errors
   if (error instanceof ZodError) {

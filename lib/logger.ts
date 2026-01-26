@@ -1,3 +1,9 @@
+/**
+ * Structured logging utility
+ * 
+ * @module lib/logger
+ */
+
 import { env } from './env'
 
 type LogLevel = 'info' | 'warn' | 'error' | 'debug'
@@ -65,4 +71,19 @@ class Logger {
   }
 }
 
+/**
+ * Logger instance
+ * 
+ * - Development: Colored console output with formatted metadata
+ * - Production: JSON-formatted logs for log aggregation services
+ * 
+ * @example
+ * ```typescript
+ * import { logger } from '@/lib/logger'
+ * 
+ * logger.info('User logged in', { userId: '123' })
+ * logger.error('Payment failed', { error: err.message, orderId: '456' })
+ * logger.debug('Processing item', { item })
+ * ```
+ */
 export const logger = new Logger()

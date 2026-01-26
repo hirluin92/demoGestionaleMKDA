@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { Calendar as CalendarIcon, Clock, Package as PackageIcon, Sparkles, CheckCircle2, ChevronDown } from 'lucide-react'
+import Button from '@/components/ui/Button'
 
 interface Package {
   id: string
@@ -22,16 +24,23 @@ export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
   const [selectedTime, setSelectedTime] = useState('')
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingSlots, setLoadingSlots] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+
+  const today = new Date().toISOString().split('T')[0]
 
   useEffect(() => {
     if (selectedDate) {
       fetchAvailableSlots()
+    } else {
+      setAvailableSlots([])
+      setSelectedTime('')
     }
   }, [selectedDate])
 
   const fetchAvailableSlots = async () => {
+    setLoadingSlots(true)
     try {
       const response = await fetch(`/api/available-slots?date=${selectedDate}`)
       if (response.ok) {
@@ -40,6 +49,9 @@ export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
       }
     } catch (error) {
       console.error('Errore recupero slot:', error)
+      setError('Impossibile caricare gli orari disponibili')
+    } finally {
+      setLoadingSlots(false)
     }
   }
 
@@ -52,9 +64,7 @@ export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
     try {
       const response = await fetch('/api/bookings', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           packageId: selectedPackage,
           date: selectedDate,
@@ -65,18 +75,17 @@ export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
       const data = await response.json()
 
       if (!response.ok) {
-        // Messaggi specifici per status code
         const errorMessages: Record<number, string> = {
           400: data.details 
             ? `Dati non validi: ${data.details.map((d: any) => d.message).join(', ')}`
             : 'Verifica data e orario',
-          404: 'Pacchetto non trovato. Ricarica la pagina.',
-          409: 'Questo orario è già stato prenotato',
-          429: 'Troppe richieste. Attendi un minuto.',
-          500: 'Errore del server. Riprova tra qualche minuto.',
+          404: 'Pacchetto non trovato',
+          409: 'Orario già prenotato',
+          429: 'Troppe richieste. Attendi.',
+          500: 'Errore del server',
         }
         
-        setError(errorMessages[response.status] || data.error || 'Errore nella prenotazione')
+        setError(errorMessages[response.status] || data.error || 'Errore')
         return
       }
 
@@ -84,138 +93,183 @@ export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
       setSelectedDate('')
       setSelectedTime('')
       setSelectedPackage('')
-      setAvailableSlots([]) // Reset slot disponibili
+      setAvailableSlots([])
       
-      // Aggiorna pacchetti
-      if (onSuccess) {
-        onSuccess()
-      }
-      
-      // Refresh della pagina per aggiornare lista prenotazioni e pacchetti
+      if (onSuccess) onSuccess()
       router.refresh()
 
-      setTimeout(() => setSuccess(false), 3000)
+      setTimeout(() => setSuccess(false), 5000)
     } catch (error) {
-      setError('Impossibile connettersi al server. Verifica la connessione e riprova.')
+      setError('Errore di connessione')
     } finally {
       setLoading(false)
     }
   }
 
-  const availablePackages = packages.filter(
-    pkg => pkg.totalSessions - pkg.usedSessions > 0
-  )
-
-  const minDate = new Date().toISOString().split('T')[0]
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          <p className="text-sm font-medium">❌ {error}</p>
-        </div>
-      )}
-
+    <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6" aria-label="Form prenotazione sessione">
+      {/* Success Message */}
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-          ✅ Prenotazione creata con successo! Riceverai una conferma via WhatsApp.
+        <div 
+          className="bg-gradient-to-r from-gold-400/10 to-gold-500/10 border-2 border-gold-400/50 rounded-xl p-4 animate-scale-in backdrop-blur-sm"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex items-start">
+            <CheckCircle2 className="w-5 h-5 md:w-6 md:h-6 text-gold-400 mr-3 flex-shrink-0 mt-0.5" aria-hidden="true" />
+            <div>
+              <p className="font-bold text-gold-300 text-sm md:text-base">Prenotazione Confermata!</p>
+              <p className="text-xs md:text-sm text-gold-500 mt-1">Riceverai una conferma via WhatsApp</p>
+            </div>
+          </div>
         </div>
       )}
 
+      {/* Error Message */}
+      {error && (
+        <div 
+          className="bg-accent-danger/10 border-2 border-accent-danger/30 rounded-xl p-4 animate-scale-in backdrop-blur-sm"
+          role="alert"
+          aria-live="assertive"
+        >
+          <div className="flex items-start">
+            <svg className="w-5 h-5 md:w-6 md:h-6 text-accent-danger mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <p className="text-xs md:text-sm font-semibold text-accent-danger">{error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Package Selection */}
       <div>
-        <label htmlFor="package" className="block text-sm font-medium text-gray-700 mb-2">
+        <label 
+          htmlFor="package-select"
+          className="block text-xs md:text-sm font-bold text-dark-700 mb-2 md:mb-3 flex items-center"
+        >
+          <PackageIcon className="w-4 h-4 mr-2 text-gold-400" aria-hidden="true" />
           Seleziona Pacchetto
         </label>
-        <select
-          id="package"
-          value={selectedPackage}
-          onChange={(e) => setSelectedPackage(e.target.value)}
-          required
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        >
-          <option value="">-- Seleziona un pacchetto --</option>
-          {availablePackages.map((pkg) => (
-            <option key={pkg.id} value={pkg.id}>
-              {pkg.name} ({pkg.totalSessions - pkg.usedSessions} sessioni rimaste)
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            id="package-select"
+            value={selectedPackage}
+            onChange={(e) => setSelectedPackage(e.target.value)}
+            required
+            aria-required="true"
+            className="w-full px-4 py-3 md:py-3.5 bg-dark-100/50 backdrop-blur-sm border-2 border-dark-200/30 rounded-xl text-white text-sm md:text-base focus-visible:border-gold-400 focus-visible:ring-2 focus-visible:ring-gold-400/20 transition-all appearance-none cursor-pointer hover:border-dark-300/50"
+          >
+            <option value="" className="bg-dark-100 text-dark-600">-- Scegli il tuo pacchetto --</option>
+            {packages.map((pkg) => {
+              const remaining = pkg.totalSessions - pkg.usedSessions
+              return (
+                <option key={pkg.id} value={pkg.id} className="bg-dark-100">
+                  {pkg.name} ({remaining} sessioni)
+                </option>
+              )
+            })}
+          </select>
+          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 pointer-events-none" aria-hidden="true" />
+        </div>
       </div>
 
+      {/* Date Selection */}
       <div>
-        <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">
-          Data
+        <label 
+          htmlFor="date-select"
+          className="block text-xs md:text-sm font-bold text-dark-700 mb-2 md:mb-3 flex items-center"
+        >
+          <CalendarIcon className="w-4 h-4 mr-2 text-gold-400" aria-hidden="true" />
+          Seleziona Data
         </label>
         <input
-          id="date"
+          id="date-select"
           type="date"
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
-          min={minDate}
+          min={today}
           required
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          aria-required="true"
+          className="w-full px-4 py-3 md:py-3.5 bg-dark-100/50 backdrop-blur-sm border-2 border-dark-200/30 rounded-xl text-white text-sm md:text-base focus-visible:border-gold-400 focus-visible:ring-2 focus-visible:ring-gold-400/20 transition-all cursor-pointer hover:border-dark-300/50"
         />
       </div>
 
+      {/* Time Selection */}
       {selectedDate && (
-        <div>
-          <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-2">
-            Orario
+        <div className="animate-slide-down">
+          <label 
+            htmlFor="time-selection"
+            className="block text-xs md:text-sm font-bold text-dark-700 mb-2 md:mb-3 flex items-center"
+          >
+            <Clock className="w-4 h-4 mr-2 text-gold-400" aria-hidden="true" />
+            Seleziona Orario
           </label>
-          {availableSlots.length === 0 ? (
-            <p className="text-gray-500 text-sm">Nessuno slot disponibile per questa data</p>
-          ) : (
-            <select
-              id="time"
-              value={selectedTime}
-              onChange={(e) => setSelectedTime(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          
+          {loadingSlots ? (
+            <div 
+              className="flex items-center justify-center py-8 md:py-12 bg-dark-100/30 rounded-xl border border-dark-200/30"
+              role="status"
+              aria-live="polite"
+              aria-label="Caricamento orari disponibili"
             >
-              <option value="">-- Seleziona un orario --</option>
+              <div className="relative">
+                <div className="w-10 h-10 md:w-12 md:h-12 border-4 border-dark-200 border-t-gold-400 rounded-full animate-spin"></div>
+                <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-gold-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" aria-hidden="true" />
+              </div>
+              <span className="sr-only">Caricamento slot disponibili...</span>
+            </div>
+          ) : availableSlots.length === 0 ? (
+            <div className="bg-dark-100/50 border-2 border-dark-200/30 rounded-xl p-4 md:p-6 text-center backdrop-blur-sm">
+              <Clock className="w-8 h-8 md:w-10 md:h-10 text-dark-500 mx-auto mb-2 md:mb-3" aria-hidden="true" />
+              <p className="text-dark-600 font-semibold text-sm md:text-base">Nessuno slot disponibile</p>
+              <p className="text-xs md:text-sm text-dark-700 mt-1">Prova un'altra data</p>
+            </div>
+          ) : (
+            <div 
+              id="time-selection"
+              className="grid grid-cols-3 md:grid-cols-4 gap-2 md:gap-3"
+              role="radiogroup"
+              aria-label="Orari disponibili"
+            >
               {availableSlots.map((slot) => (
-                <option key={slot} value={slot}>
-                  {slot}
-                </option>
+                <button
+                  key={slot}
+                  type="button"
+                  role="radio"
+                  aria-checked={selectedTime === slot}
+                  onClick={() => setSelectedTime(slot)}
+                  className={`
+                    px-3 py-2.5 md:px-4 md:py-3.5 rounded-xl font-bold text-xs md:text-sm transition-all duration-300 relative overflow-hidden group
+                    ${selectedTime === slot
+                      ? 'bg-gradient-to-r from-gold-400 to-gold-500 text-dark-950 shadow-gold scale-105 ring-2 ring-gold-400 ring-offset-2 ring-offset-dark-950'
+                      : 'bg-dark-100/50 text-dark-600 border-2 border-dark-200/30 hover:border-gold-400/50 hover:text-gold-400 hover:scale-105'
+                    }
+                  `}
+                >
+                  <span className="relative z-10">{slot}</span>
+                  {selectedTime !== slot && (
+                    <span className="hidden md:block absolute inset-0 bg-gradient-to-r from-gold-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
+                  )}
+                </button>
               ))}
-            </select>
+            </div>
           )}
         </div>
       )}
 
-      <button
+      {/* Submit Button */}
+      <Button
         type="submit"
-        disabled={loading || !selectedPackage || !selectedDate || !selectedTime}
-        className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
-          loading
-            ? 'bg-gray-400 cursor-not-allowed text-white'
-            : 'bg-primary-600 hover:bg-primary-700 text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2'
-        } disabled:opacity-50 disabled:cursor-not-allowed`}
+        variant="gold"
+        size="lg"
+        fullWidth
+        loading={loading}
+        disabled={!selectedPackage || !selectedDate || !selectedTime}
+        aria-label="Conferma prenotazione sessione"
       >
-        {loading ? (
-          <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-              <circle 
-                className="opacity-25" 
-                cx="12" 
-                cy="12" 
-                r="10" 
-                stroke="currentColor" 
-                strokeWidth="4" 
-                fill="none" 
-              />
-              <path 
-                className="opacity-75" 
-                fill="currentColor" 
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" 
-              />
-            </svg>
-            Creazione in corso...
-          </span>
-        ) : (
-          'Prenota Sessione'
-        )}
-      </button>
+        {!loading && <Sparkles className="w-4 h-4 md:w-5 md:h-5 mr-2" aria-hidden="true" />}
+        Conferma Prenotazione
+      </Button>
     </form>
   )
 }

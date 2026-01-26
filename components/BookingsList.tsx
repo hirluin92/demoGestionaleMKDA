@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Clock, X } from 'lucide-react'
+import { Calendar, Clock, X, AlertTriangle } from 'lucide-react'
 import { format } from 'date-fns'
 import { it } from 'date-fns/locale/it'
+import Button from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
 
 interface Booking {
   id: string
@@ -100,11 +102,22 @@ export default function BookingsList({ onCancel, showCountOnly }: BookingsListPr
   }
 
   if (loading) {
-    return <p className="text-gray-500">Caricamento prenotazioni...</p>
+    return (
+      <div className="text-center py-8">
+        <div className="inline-block w-8 h-8 border-4 border-dark-200 border-t-gold-400 rounded-full animate-spin"></div>
+        <p className="mt-4 text-dark-600">Caricamento prenotazioni...</p>
+      </div>
+    )
   }
 
   if (bookings.length === 0) {
-    return <p className="text-gray-500">Nessuna prenotazione</p>
+    return (
+      <div className="text-center py-12">
+        <Calendar className="w-12 h-12 text-dark-500 mx-auto mb-4" />
+        <p className="text-dark-600 font-semibold">Nessuna prenotazione</p>
+        <p className="text-sm text-dark-500 mt-2">Prenota la tua prima sessione utilizzando il form sopra</p>
+      </div>
+    )
   }
 
   const upcomingBookings = bookings
@@ -119,7 +132,10 @@ export default function BookingsList({ onCancel, showCountOnly }: BookingsListPr
     <div className="space-y-6">
       {upcomingBookings.length > 0 && (
         <div>
-          <h4 className="font-semibold text-gray-900 mb-3">Prossime Prenotazioni</h4>
+          <h4 className="font-display font-bold text-white mb-4 text-lg md:text-xl flex items-center">
+            <Calendar className="w-5 h-5 md:w-6 md:h-6 text-gold-400 mr-2" />
+            Prossime Prenotazioni
+          </h4>
           <div className="space-y-3">
             {upcomingBookings.map((booking) => {
               const bookingDate = new Date(booking.date)
@@ -128,58 +144,66 @@ export default function BookingsList({ onCancel, showCountOnly }: BookingsListPr
               return (
                 <div
                   key={booking.id}
-                  className="border rounded-lg p-4 flex items-center justify-between hover:bg-gray-50"
+                  className="bg-dark-100/50 backdrop-blur-sm border-2 border-dark-200/30 rounded-xl p-4 md:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:border-gold-400/50 transition-all duration-300 group"
                 >
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-primary-100 p-3 rounded-lg">
-                      <Calendar className="w-5 h-5 text-primary-600" />
+                  <div className="flex items-center space-x-4 flex-1">
+                    <div className="bg-gradient-to-br from-gold-400 to-gold-500 p-3 rounded-xl shadow-gold group-hover:scale-110 transition-transform duration-300">
+                      <Calendar className="w-5 h-5 md:w-6 md:h-6 text-dark-950" />
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-display font-bold text-white text-base md:text-lg mb-1">
                         {format(bookingDate, "EEEE d MMMM yyyy", { locale: it })}
                       </p>
-                      <div className="flex items-center space-x-2 text-sm text-gray-600 mt-1">
-                        <Clock className="w-4 h-4" />
-                        <span>{booking.time}</span>
-                        <span className="mx-2">•</span>
-                        <span>{booking.package.name}</span>
+                      <div className="flex flex-wrap items-center gap-2 text-sm text-dark-600">
+                        <div className="flex items-center space-x-1">
+                          <Clock className="w-4 h-4 text-gold-400" />
+                          <span className="font-semibold">{booking.time}</span>
+                        </div>
+                        <span className="text-dark-500">•</span>
+                        <Badge variant="gold" size="sm">{booking.package.name}</Badge>
                       </div>
                     </div>
                   </div>
                   {!isPast && (
-                    <div>
+                    <div className="flex-shrink-0">
                       {confirmingDelete === booking.id ? (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                          <p className="text-sm font-medium text-yellow-800 mb-2">
-                            ⚠️ Confermi la cancellazione?
-                          </p>
-                          <p className="text-xs text-yellow-700 mb-3">
+                        <div className="bg-gold-500/10 border-2 border-gold-400/30 rounded-xl p-4 backdrop-blur-sm animate-scale-in">
+                          <div className="flex items-center mb-2">
+                            <AlertTriangle className="w-5 h-5 text-gold-400 mr-2" />
+                            <p className="text-sm font-bold text-white">
+                              Confermi la cancellazione?
+                            </p>
+                          </div>
+                          <p className="text-xs text-dark-600 mb-3">
                             La sessione verrà restituita al tuo pacchetto.
                           </p>
                           <div className="flex gap-2">
-                            <button
+                            <Button
+                              variant="danger"
+                              size="sm"
                               onClick={() => handleConfirmDelete(booking.id)}
                               disabled={isDeleting}
-                              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                             >
                               {isDeleting ? 'Cancellazione...' : 'Sì, cancella'}
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                              variant="outline-gold"
+                              size="sm"
                               onClick={() => setConfirmingDelete(null)}
                               disabled={isDeleting}
-                              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-300 disabled:opacity-50"
                             >
                               Annulla
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       ) : (
                         <button
                           onClick={() => handleCancelClick(booking.id)}
-                          className="text-red-600 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                          className="text-accent-danger hover:text-accent-danger/80 p-2 hover:bg-accent-danger/10 rounded-lg transition-colors"
                           title="Cancella prenotazione"
+                          aria-label="Cancella prenotazione"
                         >
-                          <X className="w-5 h-5" />
+                          <X className="w-5 h-5 md:w-6 md:h-6" />
                         </button>
                       )}
                     </div>
@@ -193,7 +217,10 @@ export default function BookingsList({ onCancel, showCountOnly }: BookingsListPr
 
       {pastBookings.length > 0 && (
         <div>
-          <h4 className="font-semibold text-gray-900 mb-3">Prenotazioni Passate</h4>
+          <h4 className="font-display font-bold text-dark-600 mb-4 text-lg md:text-xl flex items-center">
+            <Calendar className="w-5 h-5 md:w-6 md:h-6 text-dark-500 mr-2" />
+            Prenotazioni Passate
+          </h4>
           <div className="space-y-3">
             {pastBookings.map((booking) => {
               const bookingDate = new Date(booking.date)
@@ -201,22 +228,22 @@ export default function BookingsList({ onCancel, showCountOnly }: BookingsListPr
               return (
                 <div
                   key={booking.id}
-                  className="border rounded-lg p-4 flex items-center justify-between opacity-60"
+                  className="bg-dark-100/30 backdrop-blur-sm border border-dark-200/20 rounded-xl p-4 md:p-6 flex items-center space-x-4 opacity-60"
                 >
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-gray-100 p-3 rounded-lg">
-                      <Calendar className="w-5 h-5 text-gray-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {format(bookingDate, "EEEE d MMMM yyyy", { locale: it })}
-                      </p>
-                      <div className="flex items-center space-x-2 text-sm text-gray-600 mt-1">
+                  <div className="bg-dark-200 p-3 rounded-xl">
+                    <Calendar className="w-5 h-5 md:w-6 md:h-6 text-dark-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-display font-semibold text-dark-600 text-base md:text-lg mb-1">
+                      {format(bookingDate, "EEEE d MMMM yyyy", { locale: it })}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-dark-500">
+                      <div className="flex items-center space-x-1">
                         <Clock className="w-4 h-4" />
                         <span>{booking.time}</span>
-                        <span className="mx-2">•</span>
-                        <span>{booking.package.name}</span>
                       </div>
+                      <span>•</span>
+                      <Badge variant="info" size="sm">{booking.package.name}</Badge>
                     </div>
                   </div>
                 </div>

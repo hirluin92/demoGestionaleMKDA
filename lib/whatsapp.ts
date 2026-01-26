@@ -1,3 +1,9 @@
+/**
+ * WhatsApp messaging via Twilio API
+ * 
+ * @module lib/whatsapp
+ */
+
 import twilio from 'twilio'
 import { env } from './env'
 import { isTwilioError } from './errors'
@@ -30,6 +36,27 @@ function normalizePhoneNumber(phone: string): string {
   return normalized
 }
 
+/**
+ * Sends a WhatsApp message via Twilio
+ * 
+ * Automatically normalizes phone numbers to international format.
+ * Gracefully handles missing Twilio configuration.
+ * 
+ * @param to - Recipient phone number (e.g., "3339406945" or "+393339406945")
+ * @param message - Message content
+ * @returns Twilio message object or null if Twilio not configured
+ * @throws {TwilioError} If message sending fails
+ * @example
+ * ```typescript
+ * try {
+ *   await sendWhatsAppMessage('+393339406945', 'Hello!')
+ * } catch (error) {
+ *   if (isTwilioError(error)) {
+ *     console.log('Twilio error:', error.code)
+ *   }
+ * }
+ * ```
+ */
 export async function sendWhatsAppMessage(
   to: string,
   message: string
@@ -81,6 +108,14 @@ export async function sendWhatsAppMessage(
   }
 }
 
+/**
+ * Formats a booking confirmation message
+ * 
+ * @param clientName - Name of the client
+ * @param date - Booking date
+ * @param time - Booking time in HH:mm format
+ * @returns Formatted WhatsApp message
+ */
 export function formatBookingConfirmationMessage(
   clientName: string,
   date: Date,
@@ -96,6 +131,14 @@ export function formatBookingConfirmationMessage(
   return `✅ Prenotazione confermata!\n\nCiao ${clientName},\n\nLa tua sessione è stata prenotata per:\n📅 ${formattedDate}\n🕐 ${time}\n\nTi aspettiamo allo studio Hugemass! 💪`
 }
 
+/**
+ * Formats a booking reminder message
+ * 
+ * @param clientName - Name of the client
+ * @param date - Booking date
+ * @param time - Booking time in HH:mm format
+ * @returns Formatted WhatsApp reminder message
+ */
 export function formatBookingReminderMessage(
   clientName: string,
   date: Date,

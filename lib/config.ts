@@ -1,5 +1,26 @@
+/**
+ * Application configuration constants
+ * 
+ * @module lib/config
+ */
+
 import { env } from './env'
 
+/**
+ * Application configuration
+ * 
+ * Centralized configuration for timezone, booking rules, reminders, and rate limiting.
+ * All values are type-safe and immutable.
+ * 
+ * @constant
+ * @example
+ * ```typescript
+ * import { APP_CONFIG } from '@/lib/config'
+ * 
+ * const minHour = APP_CONFIG.booking.minHour // 8
+ * const timezone = APP_CONFIG.timezone // 'Europe/Rome'
+ * ```
+ */
 export const APP_CONFIG = {
   timezone: 'Europe/Rome',
   

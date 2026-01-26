@@ -3,6 +3,10 @@
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { Lock, Sparkles } from 'lucide-react'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
+import HugemassLogo from '@/components/HugemassLogo'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -37,58 +41,82 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100">
-      <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary-700 mb-2">Hugemass</h1>
-          <p className="text-gray-600">Accedi al tuo account</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {error}
+    <div className="min-h-screen flex items-center justify-center bg-dark-950 relative overflow-hidden bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/sfondo.jpg')" }}>
+      
+      <div className="relative z-10 w-full max-w-md px-4">
+        <div className="bg-dark-50/80 backdrop-blur-xl border border-gold-400/20 rounded-2xl shadow-dark-lg p-8 md:p-10">
+          {/* Logo & Header */}
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <HugemassLogo variant="full" size="md" className="animate-fade-in" />
             </div>
-          )}
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="tuo@email.com"
-            />
           </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="••••••••"
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-6" aria-label="Form di accesso">
+            {error && (
+              <div 
+                className="bg-accent-danger/10 border-2 border-accent-danger/30 rounded-xl p-4 backdrop-blur-sm"
+                role="alert"
+                aria-live="assertive"
+              >
+                <div className="flex items-center">
+                  <svg className="w-5 h-5 text-accent-danger mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-sm font-semibold text-accent-danger">{error}</p>
+                </div>
+              </div>
+            )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {loading ? 'Accesso in corso...' : 'Accedi'}
-          </button>
-        </form>
+            <div>
+              <Input
+                id="email"
+                type="email"
+                label="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="tuo@email.com"
+                aria-required="true"
+                className="text-base"
+              />
+            </div>
+
+            <div>
+              <Input
+                id="password"
+                type="password"
+                label="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="••••••••"
+                aria-required="true"
+                className="text-base"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              variant="gold"
+              size="lg"
+              fullWidth
+              loading={loading}
+              aria-label="Accedi al tuo account"
+            >
+              {!loading && <Lock className="w-5 h-5 mr-2" aria-hidden="true" />}
+              {loading ? 'Accesso in corso...' : 'Accedi'}
+            </Button>
+          </form>
+
+          {/* Footer */}
+          <div className="mt-8 pt-6 border-t border-dark-200/30 text-center">
+            <p className="text-xs text-dark-600 flex items-center justify-center">
+              <Sparkles className="w-3 h-3 mr-1 text-gold-400" aria-hidden="true" />
+              Sistema di gestione premium
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )

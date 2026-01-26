@@ -1,3 +1,21 @@
+/**
+ * Environment variables validation and type-safe access
+ * 
+ * Validates all required environment variables at startup and provides
+ * type-safe access throughout the application.
+ * 
+ * @module lib/env
+ * @example
+ * ```typescript
+ * import { env } from '@/lib/env'
+ * 
+ * const dbUrl = env.DATABASE_URL
+ * if (env.TWILIO_ACCOUNT_SID) {
+ *   // Twilio is configured
+ * }
+ * ```
+ */
+
 import { z } from 'zod'
 
 const envSchema = z.object({

@@ -37,6 +37,21 @@ export async function DELETE(
       )
     }
 
+    // Verifica che la cancellazione avvenga almeno 3 ore prima dell'appuntamento
+    const bookingDateTime = new Date(booking.date)
+    const [hours, minutes] = booking.time.split(':').map(Number)
+    bookingDateTime.setHours(hours, minutes, 0, 0)
+    
+    const now = new Date()
+    const hoursUntilBooking = (bookingDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+    
+    if (hoursUntilBooking < 3) {
+      return NextResponse.json(
+        { error: 'Non è possibile cancellare un appuntamento con meno di 3 ore di anticipo' },
+        { status: 400 }
+      )
+    }
+
     // STEP 2: Cancella Google Calendar event PRIMA della transazione
     if (booking.googleEventId) {
       try {

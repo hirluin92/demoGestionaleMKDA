@@ -10,7 +10,7 @@ import {
   Calendar, 
   Package, 
   LogOut, 
-  Zap,
+  CheckCircle,
   Clock,
   Sparkles,
   Menu,
@@ -127,7 +127,9 @@ export default function DashboardPage() {
         <div className="text-center">
           <div className="relative">
             <div className="w-16 h-16 md:w-20 md:h-20 border-4 border-dark-200 border-t-gold-400 rounded-full animate-spin mx-auto"></div>
-            <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-[#E8DCA0] absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+              <HugemassLogo variant="icon" size="sm" className="animate-pulse" />
+            </div>
           </div>
           <p className="mt-6 text-dark-600 font-semibold tracking-wide text-sm md:text-base">Caricamento...</p>
         </div>
@@ -162,10 +164,9 @@ export default function DashboardPage() {
                 <div>
                   <h1 className="text-lg md:text-2xl heading-font font-bold">
                     <span className="gold-text-gradient">
-                      HUGE MASS
+                      Elite Training
                     </span>
                   </h1>
-                  <p className="text-xs text-dark-600 tracking-widest uppercase hidden sm:block">Elite Training</p>
                 </div>
               </div>
               
@@ -258,10 +259,6 @@ export default function DashboardPage() {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 relative z-10">
           {/* Hero Section - Mobile Optimized */}
           <div className="mb-8 md:mb-12 animate-fade-in">
-            <div className="flex items-center space-x-2 mb-2 md:mb-3">
-              <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-[#E8DCA0] animate-pulse" aria-hidden="true" />
-              <span className="text-[#E8DCA0] text-xs md:text-sm font-semibold tracking-wide uppercase">Welcome Back</span>
-            </div>
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl heading-font font-bold gold-text-gradient mb-2 md:mb-3">
               Ciao, {session.user.name?.split(' ')[0]}
             </h2>
@@ -308,7 +305,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-gold-400 to-gold-500 rounded-xl flex items-center justify-center shadow-gold group-hover:scale-110 transition-transform duration-300">
-                  <Zap className="w-6 h-6 md:w-8 md:h-8 text-dark-950" />
+                  <CheckCircle className="w-6 h-6 md:w-8 md:h-8 text-dark-950" />
                 </div>
               </CardContent>
             </Card>

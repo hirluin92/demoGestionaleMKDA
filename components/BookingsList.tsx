@@ -139,6 +139,12 @@ export default function BookingsList({ onCancel, showCountOnly }: BookingsListPr
           <div className="space-y-3">
             {upcomingBookings.map((booking) => {
               const bookingDate = new Date(booking.date)
+              const [hours, minutes] = booking.time.split(':').map(Number)
+              bookingDate.setHours(hours, minutes, 0, 0)
+              
+              const now = new Date()
+              const hoursUntilBooking = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+              const canCancel = hoursUntilBooking >= 3
               const isPast = bookingDate < new Date()
 
               return (
@@ -166,7 +172,13 @@ export default function BookingsList({ onCancel, showCountOnly }: BookingsListPr
                   </div>
                   {!isPast && (
                     <div className="flex-shrink-0">
-                      {confirmingDelete === booking.id ? (
+                      {!canCancel && (
+                        <div className="text-xs text-dark-500 text-right">
+                          <p className="mb-1">Non cancellabile</p>
+                          <p className="text-dark-600">Meno di 3 ore</p>
+                        </div>
+                      )}
+                      {canCancel && confirmingDelete === booking.id ? (
                         <div className="bg-gold-500/10 border-2 border-gold-400/30 rounded-xl p-4 backdrop-blur-sm animate-scale-in">
                           <div className="flex items-center mb-2">
                             <AlertTriangle className="w-5 h-5 text-gold-400 mr-2" />
@@ -196,7 +208,7 @@ export default function BookingsList({ onCancel, showCountOnly }: BookingsListPr
                             </Button>
                           </div>
                         </div>
-                      ) : (
+                      ) : canCancel ? (
                         <button
                           onClick={() => handleCancelClick(booking.id)}
                           className="text-accent-danger hover:text-accent-danger/80 p-2 hover:bg-accent-danger/10 rounded-lg transition-colors"
@@ -205,7 +217,7 @@ export default function BookingsList({ onCancel, showCountOnly }: BookingsListPr
                         >
                           <X className="w-5 h-5 md:w-6 md:h-6" />
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   )}
                 </div>

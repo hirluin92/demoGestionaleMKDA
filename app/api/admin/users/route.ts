@@ -42,14 +42,19 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'name' // 'name' | 'collaborationStartDate'
     const sortOrder = searchParams.get('sortOrder') || 'asc' // 'asc' | 'desc'
 
+    // Valida sortOrder - deve essere 'asc' o 'desc'
+    const validSortOrder = (sortOrder === 'desc' ? 'desc' : 'asc') as 'asc' | 'desc'
+    
     let orderBy: any = {}
     
     if (sortBy === 'name') {
-      orderBy = { name: sortOrder }
+      orderBy = { name: validSortOrder }
     } else if (sortBy === 'collaborationStartDate') {
-      orderBy = { 
-        collaborationStartDate: sortOrder === 'asc' ? 'asc' : 'desc'
-      }
+      // Per collaborationStartDate, ordina per data e poi per nome come criterio secondario
+      orderBy = [
+        { collaborationStartDate: validSortOrder },
+        { name: 'asc' } // Ordine secondario per consistenza quando le date sono uguali o null
+      ]
     } else {
       orderBy = { name: 'asc' }
     }

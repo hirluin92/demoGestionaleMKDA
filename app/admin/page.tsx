@@ -224,19 +224,19 @@ export default function AdminPage() {
 
           {/* Tabs */}
           <div className="mb-6 md:mb-8">
-            <div className="flex gap-4">
-              <nav className="flex gap-4" role="tablist" aria-label="Sezioni amministrazione">
+            <div className="overflow-x-auto no-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
+              <nav className="flex gap-2 md:gap-4 min-w-max" role="tablist" aria-label="Sezioni amministrazione">
                 <button
                   onClick={() => setActiveTab('users')}
                   role="tab"
                   aria-selected={activeTab === 'users'}
                   aria-controls="users-panel"
                   id="users-tab"
-                  className={`tab-button heading-font ${activeTab === 'users' ? 'active' : ''}`}
+                  className={`tab-button heading-font ${activeTab === 'users' ? 'active' : ''} whitespace-nowrap`}
                   style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                 >
-                  <Users className="w-4 h-4 md:w-5 md:h-5" />
-                  <span>Clienti</span>
+                  <Users className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+                  <span className="text-sm md:text-base">Clienti</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('packages')}
@@ -244,11 +244,11 @@ export default function AdminPage() {
                   aria-selected={activeTab === 'packages'}
                   aria-controls="packages-panel"
                   id="packages-tab"
-                  className={`tab-button heading-font ${activeTab === 'packages' ? 'active' : ''}`}
+                  className={`tab-button heading-font ${activeTab === 'packages' ? 'active' : ''} whitespace-nowrap`}
                   style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                 >
-                  <Package className="w-4 h-4 md:w-5 md:h-5" />
-                  <span>Pacchetti</span>
+                  <Package className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+                  <span className="text-sm md:text-base">Pacchetti</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('calendar')}
@@ -256,11 +256,11 @@ export default function AdminPage() {
                   aria-selected={activeTab === 'calendar'}
                   aria-controls="calendar-panel"
                   id="calendar-tab"
-                  className={`tab-button heading-font ${activeTab === 'calendar' ? 'active' : ''}`}
+                  className={`tab-button heading-font ${activeTab === 'calendar' ? 'active' : ''} whitespace-nowrap`}
                   style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                 >
-                  <Calendar className="w-4 h-4 md:w-5 md:h-5" />
-                  <span>Calendario</span>
+                  <Calendar className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+                  <span className="text-sm md:text-base">Calendario</span>
                 </button>
               </nav>
             </div>

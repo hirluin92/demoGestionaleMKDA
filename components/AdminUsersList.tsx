@@ -61,11 +61,14 @@ export default function AdminUsersList() {
   }, [sortBy, sortOrder])
 
   const fetchUsers = async () => {
+    setLoading(true)
     try {
       const response = await fetch(`/api/admin/users?sortBy=${sortBy}&sortOrder=${sortOrder}`)
       if (response.ok) {
         const data = await response.json()
         setUsers(data)
+      } else {
+        console.error('Errore nella risposta API:', response.status, response.statusText)
       }
     } catch (error) {
       console.error('Errore recupero utenti:', error)

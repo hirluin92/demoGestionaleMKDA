@@ -110,33 +110,40 @@
   box-shadow: 0 0 8px rgba(250, 245, 200, 0.3), 0 0 15px rgba(255, 250, 220, 0.15);
 }
 
-/* Particelle più grandi e visibili su mobile */
+/* Particelle molto più grandi e visibili su mobile */
 @media (max-width: 768px) {
   .particle {
-    width: 6px;
-    height: 6px;
-    background: radial-gradient(circle, rgba(250, 245, 200, 0.7) 0%, rgba(255, 250, 220, 0.4) 40%, transparent 70%);
-    box-shadow: 0 0 12px rgba(250, 245, 200, 0.6), 0 0 20px rgba(255, 250, 220, 0.4);
+    width: 10px !important;
+    height: 10px !important;
+    background: radial-gradient(circle, rgba(250, 245, 200, 1) 0%, rgba(255, 250, 220, 0.8) 50%, rgba(255, 250, 220, 0.4) 80%, transparent 100%) !important;
+    box-shadow: 0 0 20px rgba(250, 245, 200, 0.9), 0 0 30px rgba(255, 250, 220, 0.6), 0 0 40px rgba(255, 250, 220, 0.3) !important;
+    will-change: transform, opacity;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
   }
   
-  @keyframes float-particle {
+  @keyframes float-particle-mobile {
     0% {
-      transform: translateY(100vh) translateX(0) scale(0);
+      transform: translate3d(0, 100vh, 0) scale(0);
       opacity: 0;
     }
-    5% {
-      opacity: 0.9;
+    3% {
+      opacity: 1;
     }
     50% {
       opacity: 1;
     }
-    95% {
-      opacity: 0.9;
+    97% {
+      opacity: 1;
     }
     100% {
-      transform: translateY(-100px) translateX(var(--tx)) scale(1.2);
+      transform: translate3d(var(--tx), -100px, 0) scale(1.5);
       opacity: 0;
     }
+  }
+  
+  .particle {
+    animation: float-particle-mobile linear infinite !important;
   }
 }
 
@@ -547,6 +554,15 @@ button.tab-button,
   cursor: pointer !important;
 }
 
+/* Tab responsive su mobile */
+@media (max-width: 768px) {
+  button.tab-button,
+  .tab-button {
+    padding: 10px 16px !important;
+    font-size: 14px !important;
+  }
+}
+
 button.tab-button:hover,
 .tab-button:hover {
   background: rgba(255, 255, 255, 0.08) !important;
@@ -604,6 +620,70 @@ button.tab-button.active,
   position: relative;
   padding: 6px;
   width: 100%;
+}
+
+/* Calendar responsive su mobile */
+@media (max-width: 768px) {
+  .calendar-container {
+    max-width: 100%;
+    padding: 0 8px;
+  }
+  
+  .calendar-header-day {
+    font-size: 10px;
+    padding: 6px 2px;
+  }
+  
+  .calendar-day {
+    padding: 4px;
+    min-height: 40px;
+  }
+  
+  .calendar-day-number {
+    font-size: 11px !important;
+  }
+  
+  .calendar-day-count {
+    width: 12px !important;
+    height: 12px !important;
+    font-size: 7px !important;
+    bottom: 2px !important;
+    right: 2px !important;
+  }
+  
+  .time-label {
+    font-size: 10px !important;
+    min-width: 45px;
+  }
+  
+  .time-slot {
+    min-height: 30px !important;
+    padding: 3px 4px !important;
+  }
+  
+  .time-slot.has-appointment {
+    min-height: 50px !important;
+  }
+  
+  .appointment-block {
+    font-size: 11px !important;
+    padding: 4px !important;
+  }
+  
+  /* Vista mensile responsive */
+  .glass-card.rounded-lg.p-3 {
+    padding: 8px !important;
+  }
+  
+  .glass-card.rounded-lg.p-2 {
+    padding: 6px !important;
+  }
+  
+  /* Controlli calendario responsive */
+  .calendar-view-btn {
+    font-size: 12px !important;
+    padding: 6px 12px !important;
+  }
 }
 
 .calendar-day:hover {

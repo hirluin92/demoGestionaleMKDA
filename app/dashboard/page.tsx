@@ -9,12 +9,10 @@ import { signOut } from 'next-auth/react'
 import { 
   Calendar, 
   Package, 
-  TrendingUp, 
   LogOut, 
   Zap,
   Clock,
   Sparkles,
-  Award,
   Menu,
   X,
   Ruler,
@@ -298,7 +296,7 @@ export default function DashboardPage() {
             <>
 
           {/* Stats Cards - Responsive Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12 animate-slide-up">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mb-8 md:mb-12 animate-slide-up">
             {/* Sessioni Disponibili - Gold Highlight */}
             <Card variant="gold-border" hover className="relative overflow-hidden group">
               <div className="hidden md:block absolute inset-0 bg-gradient-to-br from-gold-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" aria-hidden="true" />
@@ -324,24 +322,6 @@ export default function DashboardPage() {
                 </div>
                 <div className="w-12 h-12 md:w-16 md:h-16 bg-dark-100 rounded-xl flex items-center justify-center group-hover:bg-dark-200 transition-colors duration-300">
                   <Package className="w-6 h-6 md:w-8 md:h-8 text-[#E8DCA0]" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Status - Full width on mobile when 3rd item */}
-            <Card hover className="sm:col-span-2 lg:col-span-1">
-              <CardContent className="flex items-center justify-between">
-                <div>
-                  <p className="text-dark-600 text-xs md:text-sm font-semibold mb-1 md:mb-2 tracking-wide uppercase">Livello</p>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="gold" glow>
-                      <Award className="w-3 h-3 mr-1" />
-                      ELITE
-                    </Badge>
-                  </div>
-                </div>
-                <div className="w-12 h-12 md:w-16 md:h-16 bg-dark-100 rounded-xl flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 md:w-8 md:h-8 text-[#E8DCA0]" />
                 </div>
               </CardContent>
             </Card>
@@ -436,7 +416,7 @@ export default function DashboardPage() {
                     <BookingForm onSuccess={handleBookingSuccess} packages={activePackages} />
                   </CardContent>
                 </Card>
-              ) : (
+              ) : packages.length > 0 ? (
                 <Card variant="gold-border" className="text-center">
                   <CardContent className="py-12 md:py-16">
                     <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-gold-400 to-gold-500 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-gold">
@@ -445,13 +425,23 @@ export default function DashboardPage() {
                     <h3 className="text-xl md:text-2xl font-display font-bold text-white mb-2 md:mb-3">
                       Sessioni Esaurite
                     </h3>
-                    <p className="text-sm md:text-base text-dark-600 mb-6 md:mb-8 px-4">
+                    <p className="text-sm md:text-base text-dark-600 px-4">
                       Contatta l'amministratore per acquistare un nuovo pacchetto premium
                     </p>
-                    <Button variant="gold" size="lg">
-                      <HugemassLogo variant="icon" size="sm" className="mr-2" />
-                      Contatta Admin
-                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card variant="gold-border" className="text-center">
+                  <CardContent className="py-12 md:py-16">
+                    <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-gold-400 to-gold-500 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-gold">
+                      <Package className="w-8 h-8 md:w-10 md:h-10 text-dark-950" />
+                    </div>
+                    <h3 className="text-xl md:text-2xl font-display font-bold text-white mb-2 md:mb-3">
+                      Nessun Pacchetto Assegnato
+                    </h3>
+                    <p className="text-sm md:text-base text-dark-600 px-4">
+                      Contatta l'amministratore per ricevere un pacchetto premium
+                    </p>
                   </CardContent>
                 </Card>
               )}

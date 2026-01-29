@@ -182,3 +182,50 @@ export async function PUT(
     )
   }
 }
+
+// DELETE - Elimina un utente (solo admin)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
+    }
+
+    // Verifica se l'utente esiste
+    const existingUser = await prisma.user.findUnique({
+      where: { id: params.id },
+    })
+
+    if (!existingUser) {
+      return NextResponse.json(
+        { error: 'Utente non trovato' },
+        { status: 404 }
+      )
+    }
+
+    // Non permettere eliminazione di admin
+    if (existingUser.role === 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Non è possibile eliminare un utente admin' },
+        { status: 403 }
+      )
+    }
+
+    // Elimina l'utente (cascade eliminerà pacchetti e prenotazioni)
+    await prisma.user.delete({
+      where: { id: params.id },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Errore eliminazione utente:', error)
+    return NextResponse.json(
+      { error: 'Errore interno del server' },
+      { status: 500 }
+    )
+  }
+}

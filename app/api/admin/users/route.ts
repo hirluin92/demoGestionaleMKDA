@@ -38,6 +38,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
     }
 
+    const { searchParams } = new URL(request.url)
+    const sortBy = searchParams.get('sortBy') || 'name' // 'name' | 'collaborationStartDate'
+    const sortOrder = searchParams.get('sortOrder') || 'asc' // 'asc' | 'desc'
+
+    let orderBy: any = {}
+    
+    if (sortBy === 'name') {
+      orderBy = { name: sortOrder }
+    } else if (sortBy === 'collaborationStartDate') {
+      orderBy = { 
+        collaborationStartDate: sortOrder === 'asc' ? 'asc' : 'desc'
+      }
+    } else {
+      orderBy = { name: 'asc' }
+    }
+
     const users = await prisma.user.findMany({
       where: {
         role: 'CLIENT',
@@ -56,9 +72,7 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy,
     })
 
     return NextResponse.json(users)

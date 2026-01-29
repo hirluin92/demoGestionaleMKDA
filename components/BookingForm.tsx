@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Calendar as CalendarIcon, Clock, Package as PackageIcon, Sparkles, CheckCircle2, ChevronDown } from 'lucide-react'
+import { Calendar as CalendarIcon, Clock, Sparkles, CheckCircle2 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 
 interface Package {
@@ -19,7 +19,6 @@ interface BookingFormProps {
 
 export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
   const router = useRouter()
-  const [selectedPackage, setSelectedPackage] = useState('')
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState('')
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
@@ -30,6 +29,12 @@ export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
 
   const today = new Date().toISOString().split('T')[0]
 
+  // Seleziona automaticamente il primo pacchetto con sessioni disponibili
+  const activePackage = packages.find(pkg => {
+    const remaining = pkg.totalSessions - pkg.usedSessions
+    return remaining > 0
+  })
+
   useEffect(() => {
     if (selectedDate) {
       fetchAvailableSlots()
@@ -38,6 +43,16 @@ export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
       setSelectedTime('')
     }
   }, [selectedDate])
+
+  // Verifica che ci sia almeno un pacchetto disponibile
+  if (!activePackage) {
+    return (
+      <div className="bg-dark-100/50 border-2 border-dark-200/30 rounded-xl p-4 md:p-6 text-center backdrop-blur-sm">
+        <p className="text-dark-600 font-semibold text-sm md:text-base">Nessun pacchetto disponibile</p>
+        <p className="text-xs md:text-sm text-dark-700 mt-1">Contatta l'amministratore per acquistare un pacchetto</p>
+      </div>
+    )
+  }
 
   const fetchAvailableSlots = async () => {
     setLoadingSlots(true)
@@ -66,7 +81,7 @@ export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          packageId: selectedPackage,
+          packageId: activePackage.id,
           date: selectedDate,
           time: selectedTime,
         }),
@@ -92,7 +107,6 @@ export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
       setSuccess(true)
       setSelectedDate('')
       setSelectedTime('')
-      setSelectedPackage('')
       setAvailableSlots([])
       
       if (onSuccess) onSuccess()
@@ -140,38 +154,6 @@ export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
           </div>
         </div>
       )}
-
-      {/* Package Selection */}
-      <div>
-        <label 
-          htmlFor="package-select"
-          className="block text-xs md:text-sm font-bold text-dark-700 mb-2 md:mb-3 flex items-center"
-        >
-          <PackageIcon className="w-4 h-4 mr-2 text-gold-400" aria-hidden="true" />
-          Seleziona Pacchetto
-        </label>
-        <div className="relative">
-          <select
-            id="package-select"
-            value={selectedPackage}
-            onChange={(e) => setSelectedPackage(e.target.value)}
-            required
-            aria-required="true"
-            className="w-full px-4 py-3 md:py-3.5 bg-dark-100/50 backdrop-blur-sm border-2 border-dark-200/30 rounded-xl text-white text-sm md:text-base focus-visible:border-gold-400 focus-visible:ring-2 focus-visible:ring-gold-400/20 transition-all appearance-none cursor-pointer hover:border-dark-300/50"
-          >
-            <option value="" className="bg-dark-100 text-dark-600">-- Scegli il tuo pacchetto --</option>
-            {packages.map((pkg) => {
-              const remaining = pkg.totalSessions - pkg.usedSessions
-              return (
-                <option key={pkg.id} value={pkg.id} className="bg-dark-100">
-                  {pkg.name} ({remaining} sessioni)
-                </option>
-              )
-            })}
-          </select>
-          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 pointer-events-none" aria-hidden="true" />
-        </div>
-      </div>
 
       {/* Date Selection */}
       <div>
@@ -264,7 +246,7 @@ export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
         size="lg"
         fullWidth
         loading={loading}
-        disabled={!selectedPackage || !selectedDate || !selectedTime}
+        disabled={!selectedDate || !selectedTime}
         aria-label="Conferma prenotazione sessione"
       >
         {!loading && <Sparkles className="w-4 h-4 md:w-5 md:h-5 mr-2" aria-hidden="true" />}

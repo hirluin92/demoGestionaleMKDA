@@ -35,10 +35,15 @@ interface UserWithPackage {
   }>
 }
 
+type SortBy = 'name' | 'totalSessions'
+type SortOrder = 'asc' | 'desc'
+
 export default function AdminPackagesList() {
   const [packages, setPackages] = useState<PackageData[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPackageType, setSelectedPackageType] = useState<PackageType | 'all'>('all')
+  const [sortBy, setSortBy] = useState<SortBy>('totalSessions')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
 
   useEffect(() => {
     fetchPackages()
@@ -58,7 +63,7 @@ export default function AdminPackagesList() {
     }
   }
 
-  // Raggruppa pacchetti per tipo e utente
+  // Raggruppa pacchetti per tipo e utente, ordinati per numero sessioni
   const usersByPackageType = useMemo(() => {
     const filtered = selectedPackageType === 'all' 
       ? packages 
@@ -84,8 +89,23 @@ export default function AdminPackagesList() {
       })
     })
 
+    // Ordina i pacchetti in base al criterio selezionato
+    Object.values(grouped).forEach(userData => {
+      userData.packages.sort((a, b) => {
+        let comparison = 0
+        
+        if (sortBy === 'name') {
+          comparison = a.name.localeCompare(b.name, 'it', { sensitivity: 'base' })
+        } else if (sortBy === 'totalSessions') {
+          comparison = a.totalSessions - b.totalSessions
+        }
+        
+        return sortOrder === 'asc' ? comparison : -comparison
+      })
+    })
+
     return Object.values(grouped)
-  }, [packages, selectedPackageType])
+  }, [packages, selectedPackageType, sortBy, sortOrder])
 
   if (loading) {
     return (
@@ -106,31 +126,66 @@ export default function AdminPackagesList() {
     )
   }
 
+  const handleSort = (field: SortBy) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(field)
+      setSortOrder('asc')
+    }
+  }
+
   return (
     <div className="space-y-6">
-      {/* Selezione tipo pacchetto */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-        <label className="text-sm font-semibold text-dark-600 whitespace-nowrap">
-          Filtra per tipo pacchetto:
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={selectedPackageType === 'all' ? 'gold' : 'outline-gold'}
-            size="sm"
-            onClick={() => setSelectedPackageType('all')}
-          >
-            Tutti
-          </Button>
-          {PACKAGE_TYPES.map(type => (
+      {/* Filtri e ordinamento */}
+      <div className="flex flex-col gap-4">
+        {/* Selezione tipo pacchetto */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <label className="text-sm font-semibold text-dark-600 whitespace-nowrap">
+            Filtra per tipo pacchetto:
+          </label>
+          <div className="flex flex-wrap gap-2">
             <Button
-              key={type}
-              variant={selectedPackageType === type ? 'gold' : 'outline-gold'}
+              variant={selectedPackageType === 'all' ? 'gold' : 'outline-gold'}
               size="sm"
-              onClick={() => setSelectedPackageType(type)}
+              onClick={() => setSelectedPackageType('all')}
             >
-              {type} lezioni
+              Tutti
             </Button>
-          ))}
+            {PACKAGE_TYPES.map(type => (
+              <Button
+                key={type}
+                variant={selectedPackageType === type ? 'gold' : 'outline-gold'}
+                size="sm"
+                onClick={() => setSelectedPackageType(type)}
+              >
+                {type} lezioni
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Ordinamento */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <label className="text-sm font-semibold text-dark-600 whitespace-nowrap">
+            Ordina pacchetti per:
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={sortBy === 'name' ? 'gold' : 'outline-gold'}
+              size="sm"
+              onClick={() => handleSort('name')}
+            >
+              Nome Pacchetto {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+            </Button>
+            <Button
+              variant={sortBy === 'totalSessions' ? 'gold' : 'outline-gold'}
+              size="sm"
+              onClick={() => handleSort('totalSessions')}
+            >
+              Numero Sessioni {sortBy === 'totalSessions' && (sortOrder === 'asc' ? '↑' : '↓')}
+            </Button>
+          </div>
         </div>
       </div>
 

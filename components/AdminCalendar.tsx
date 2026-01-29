@@ -149,9 +149,9 @@ export default function AdminCalendar() {
     return (
       <div className="space-y-4">
         {/* Day names header */}
-        <div className="grid grid-cols-7 gap-2 mb-2">
+        <div className="calendar-header">
           {dayNames.map(day => (
-            <div key={day} className="text-center text-xs text-gray-400 font-semibold py-2">
+            <div key={day} className="calendar-header-day">
               {day}
             </div>
           ))}
@@ -189,23 +189,23 @@ export default function AdminCalendar() {
 
         {/* Appuntamenti del giorno selezionato */}
         {selectedDate && appointmentsByDate[selectedDate] && (
-          <div className="glass-card rounded-lg p-4 mt-4">
-            <p className="text-sm font-semibold mb-3 gold-text-gradient heading-font">
+          <div className="glass-card rounded-lg p-3 mt-3">
+            <p className="text-xs font-semibold mb-2 gold-text-gradient heading-font">
               {formatDate(selectedDate)} - {appointmentsByDate[selectedDate].length} appuntament{appointmentsByDate[selectedDate].length !== 1 ? 'i' : 'o'}
             </p>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {appointmentsByDate[selectedDate].map(apt => (
                 <div 
                   key={apt.id} 
-                  className="glass-card rounded-lg p-3 cursor-pointer hover:border-gold-400/50 transition-all duration-300"
+                  className="glass-card rounded-lg p-2 cursor-pointer hover:border-gold-400/50 transition-all duration-300"
                   onClick={() => showAppointmentDetail(apt)}
                 >
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="font-semibold text-white">{apt.client_name}</p>
-                      <p className="text-sm text-gray-400">{apt.time} • {apt.service}</p>
+                      <p className="font-semibold text-sm text-white">{apt.client_name}</p>
+                      <p className="text-xs text-gray-400">{apt.time} • {apt.service}</p>
                     </div>
-                    <Badge variant={apt.status === 'confirmed' ? 'success' : apt.status === 'pending' ? 'warning' : 'info'}>
+                    <Badge variant={apt.status === 'confirmed' ? 'success' : apt.status === 'pending' ? 'warning' : 'info'} size="sm">
                       {apt.status.toUpperCase()}
                     </Badge>
                   </div>
@@ -242,11 +242,11 @@ export default function AdminCalendar() {
     return (
       <div className="space-y-4">
         {/* Header giorno */}
-        <div className="glass-card rounded-lg p-4 mb-4">
-          <h3 className="text-xl font-bold gold-text-gradient heading-font mb-2">
+        <div className="glass-card rounded-lg p-3 mb-3">
+          <h3 className="text-lg font-bold gold-text-gradient heading-font mb-1">
             {dayAppointments.length} Appuntament{dayAppointments.length !== 1 ? 'i' : 'o'}
           </h3>
-          <p className="text-sm text-gray-400">Orario: 06:00 - 22:00</p>
+          <p className="text-xs text-gray-400">Orario: 06:00 - 22:00</p>
         </div>
 
         {/* Griglia giornaliera */}
@@ -257,12 +257,12 @@ export default function AdminCalendar() {
             return (
               <div 
                 key={hour} 
-                className={`grid grid-cols-12 gap-2 ${hasAppointment ? 'min-h-[80px]' : 'min-h-[30px]'}`}
+                className={`grid grid-cols-12 gap-2 ${hasAppointment ? 'min-h-[60px]' : 'min-h-[25px]'}`}
               >
-                <div className="col-span-1 time-label flex items-center text-sm">
+                <div className="col-span-1 time-label flex items-center text-xs">
                   {String(hour).padStart(2, '0')}:00
                 </div>
-                <div className={`col-span-11 time-slot ${hasAppointment ? 'has-appointment min-h-[80px]' : 'min-h-[20px]'}`}>
+                <div className={`col-span-11 time-slot ${hasAppointment ? 'has-appointment min-h-[60px]' : 'min-h-[20px]'}`}>
                   {hasAppointment && appointmentsByHour[hour].map(apt => (
                     <div
                       key={apt.id}
@@ -271,20 +271,20 @@ export default function AdminCalendar() {
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <div className="font-bold text-white">{apt.client_name}</div>
-                          <div className="text-sm text-gray-400">{apt.time} • {apt.service}</div>
+                          <div className="font-semibold text-sm text-white">{apt.client_name}</div>
+                          <div className="text-xs text-gray-400">{apt.time} • {apt.service}</div>
                           <div className="text-xs mt-1">
-                            <Badge variant={apt.status === 'confirmed' ? 'success' : apt.status === 'pending' ? 'warning' : 'info'}>
+                            <Badge variant={apt.status === 'confirmed' ? 'success' : apt.status === 'pending' ? 'warning' : 'info'} size="sm">
                               {apt.status.toUpperCase()}
                             </Badge>
                           </div>
                         </div>
                         {apt.phone && (
-                          <div className="text-xs text-gray-400 ml-2">{apt.phone}</div>
+                          <div className="text-xs text-gray-500 ml-2">{apt.phone}</div>
                         )}
                       </div>
                       {apt.notes && (
-                        <div className="text-xs text-gray-300 mt-2">{apt.notes}</div>
+                        <div className="text-xs text-gray-400 mt-1">{apt.notes}</div>
                       )}
                     </div>
                   ))}
@@ -313,7 +313,7 @@ export default function AdminCalendar() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 calendar-container">
       {/* Controls */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center space-x-4">

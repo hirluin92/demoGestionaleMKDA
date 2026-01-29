@@ -21,8 +21,8 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
   const [formData, setFormData] = useState({
     userId: '',
     name: '',
-    totalSessions: 10,
-    durationMinutes: 60,
+    totalSessions: '10',
+    durationMinutes: '60',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,6 +54,22 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
     setError(null)
     setLoading(true)
 
+    // Validazione numeri
+    const totalSessions = parseInt(formData.totalSessions, 10)
+    const durationMinutes = parseInt(formData.durationMinutes, 10)
+
+    if (isNaN(totalSessions) || totalSessions < 1) {
+      setError('Il numero di sessioni deve essere un numero positivo')
+      setLoading(false)
+      return
+    }
+
+    if (isNaN(durationMinutes) || durationMinutes < 15) {
+      setError('La durata deve essere almeno 15 minuti')
+      setLoading(false)
+      return
+    }
+
     try {
       const response = await fetch('/api/admin/packages', {
         method: 'POST',
@@ -62,8 +78,8 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
         },
         body: JSON.stringify({
           ...formData,
-          totalSessions: Number(formData.totalSessions),
-          durationMinutes: Number(formData.durationMinutes),
+          totalSessions,
+          durationMinutes,
         }),
       })
 
@@ -181,13 +197,21 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
               Numero Sessioni
             </label>
             <input
-              type="number"
+              type="text"
               id="totalSessions"
               required
-              min="1"
+              inputMode="numeric"
+              pattern="[0-9]*"
               className="input-field w-full"
+              placeholder="Es: 10"
               value={formData.totalSessions}
-              onChange={(e) => handleInputChange('totalSessions', parseInt(e.target.value) || 0)}
+              onChange={(e) => {
+                const value = e.target.value
+                // Permetti solo numeri o campo vuoto
+                if (value === '' || /^\d+$/.test(value)) {
+                  handleInputChange('totalSessions', value)
+                }
+              }}
             />
           </div>
 
@@ -200,15 +224,21 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
               Durata Sessione (minuti)
             </label>
             <input
-              type="number"
+              type="text"
               id="durationMinutes"
               required
-              min="15"
-              step="15"
+              inputMode="numeric"
+              pattern="[0-9]*"
               className="input-field w-full"
               placeholder="60"
               value={formData.durationMinutes}
-              onChange={(e) => handleInputChange('durationMinutes', parseInt(e.target.value) || 60)}
+              onChange={(e) => {
+                const value = e.target.value
+                // Permetti solo numeri o campo vuoto
+                if (value === '' || /^\d+$/.test(value)) {
+                  handleInputChange('durationMinutes', value)
+                }
+              }}
             />
             <p className="mt-2 text-xs text-dark-600">
               Durata di ogni sessione in minuti (es: 60 = 1 ora, 90 = 1.5 ore, 120 = 2 ore)

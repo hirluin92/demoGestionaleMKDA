@@ -16,9 +16,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const userId = searchParams.get('userId')
 
     const where: any = {
       status: { not: 'CANCELLED' },
+    }
+
+    if (userId) {
+      where.userId = userId
     }
 
     if (startDate && endDate) {

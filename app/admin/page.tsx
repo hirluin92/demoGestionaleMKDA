@@ -114,12 +114,6 @@ export default function AdminPage() {
                   <HugemassLogo variant="icon" size="sm" />
                 </div>
                 <div>
-                  <div className="text-lg md:text-2xl heading-font font-bold mb-0.5">
-                    <span className="gold-text-gradient">
-                      HUGE MASS
-                    </span>
-                    <span className="text-white ml-2 text-sm md:text-base font-sans">Admin</span>
-                  </div>
                   <p className="text-xs text-dark-600 tracking-widest uppercase font-sans">CONTROL PANEL</p>
                 </div>
               </div>
@@ -220,10 +214,6 @@ export default function AdminPage() {
         <main className="max-w-[98%] xl:max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 relative z-10">
           {/* Hero Section */}
           <div className="mb-8 md:mb-12 animate-fade-in">
-            <div className="flex items-center space-x-2 mb-2 md:mb-3">
-              <Settings className="w-4 h-4 md:w-5 md:h-5 text-[#E8DCA0] animate-pulse" aria-hidden="true" />
-              <span className="text-[#E8DCA0] text-xs md:text-sm font-semibold tracking-wide uppercase heading-font">Admin Panel</span>
-            </div>
             <h2 className="text-2xl sm:text-3xl md:text-4xl heading-font font-bold gold-text-gradient mb-2 md:mb-3">
               Pannello di Controllo
             </h2>
@@ -345,7 +335,7 @@ export default function AdminPage() {
                     <CardDescription className="text-xs md:text-sm">Visualizza gli appuntamenti per mese o giorno</CardDescription>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="max-w-[900px] mx-auto">
                   <AdminCalendar />
                 </CardContent>
               </div>

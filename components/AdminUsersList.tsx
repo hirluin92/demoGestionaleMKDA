@@ -105,9 +105,10 @@ export default function AdminUsersList() {
       if (response.ok) {
         const data = await response.json()
         // Estrai i pacchetti unici (potrebbero esserci duplicati se un pacchetto è assegnato a più utenti)
-        const uniquePackages = Array.from<{ id: string; name: string; totalSessions: number }>(
-          new Map(data.map((pkg: any) => [pkg.id, { id: pkg.id, name: pkg.name, totalSessions: pkg.totalSessions }])).values()
+        const packageMap = new Map<string, { id: string; name: string; totalSessions: number }>(
+          data.map((pkg: any) => [pkg.id, { id: pkg.id, name: pkg.name, totalSessions: pkg.totalSessions }])
         )
+        const uniquePackages = Array.from(packageMap.values())
         setPackages(uniquePackages)
       }
     } catch (error) {

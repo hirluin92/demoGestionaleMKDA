@@ -14,6 +14,7 @@ interface DeleteConfirmModalProps {
   confirmText?: string
   cancelText?: string
   variant?: 'danger' | 'warning'
+  isLoading?: boolean
 }
 
 export default function DeleteConfirmModal({
@@ -25,6 +26,7 @@ export default function DeleteConfirmModal({
   confirmText = 'Elimina',
   cancelText = 'Annulla',
   variant = 'danger',
+  isLoading = false,
 }: DeleteConfirmModalProps) {
   const [mounted, setMounted] = useState(false)
 
@@ -88,6 +90,8 @@ export default function DeleteConfirmModal({
               variant={variant === 'danger' ? 'danger' : 'gold'}
               onClick={handleConfirm}
               className="min-w-[120px]"
+              loading={isLoading}
+              disabled={isLoading}
             >
               {confirmText}
             </Button>

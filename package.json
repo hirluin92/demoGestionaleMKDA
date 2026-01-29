@@ -17,6 +17,8 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "seed:admin": "tsx scripts/seed-admin.ts",
+    "setup:neon": "tsx scripts/setup-neon-db.ts",
+    "check:neon": "tsx scripts/check-neon-db.ts",
     "setup:calendar": "tsx scripts/setup-google-calendar.ts",
     "fix:password": "tsx scripts/fix-user-password.ts",
     "check:calendar": "tsx scripts/check-google-calendar-sync.ts",

@@ -2,6 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { useSessionSecurity } from '@/hooks/useSessionSecurity'
 import { useEffect, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { signOut } from 'next-auth/react'
@@ -22,6 +23,7 @@ import { Badge } from '@/components/ui/Badge'
 export default function AdminPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  useSessionSecurity() // Aggiunge controlli di sicurezza sulla sessione
   const [activeTab, setActiveTab] = useState<'users' | 'packages' | 'calendar'>('users')
   const [showCreateUser, setShowCreateUser] = useState(false)
   const [showCreatePackage, setShowCreatePackage] = useState(false)
@@ -340,7 +342,7 @@ export default function AdminPage() {
                       <Calendar className="w-5 h-5 md:w-6 md:h-6 mr-2 md:mr-3 text-[#E8DCA0]" />
                       Calendario Appuntamenti
                     </CardTitle>
-                    <CardDescription className="text-xs md:text-sm">Visualizza gli appuntamenti del giorno e della settimana</CardDescription>
+                    <CardDescription className="text-xs md:text-sm">Visualizza gli appuntamenti per mese o giorno</CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent>

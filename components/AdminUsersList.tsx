@@ -70,7 +70,7 @@ export default function AdminUsersList() {
   }
 
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full overflow-x-auto no-scrollbar">
       <div className="w-full min-w-0">
         {/* Mobile: Card Layout */}
         <div className="lg:hidden space-y-4">
@@ -138,7 +138,7 @@ export default function AdminUsersList() {
         </div>
 
         {/* Desktop: Table Layout */}
-        <div className="hidden lg:block overflow-x-auto">
+        <div className="hidden lg:block overflow-x-auto no-scrollbar">
           <div className="inline-block min-w-full align-middle">
             <table className="min-w-full">
             <thead>

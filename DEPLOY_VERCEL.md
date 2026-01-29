@@ -154,15 +154,22 @@ npx prisma migrate deploy
 
 Dopo aver eseguito le migration, crea l'utente admin:
 
-```bash
-npm run seed:admin
-```
-
-Oppure usa lo script direttamente con le variabili d'ambiente:
+**Opzione A: Usando lo script dedicato Neon (Consigliato)**
 
 ```bash
-DATABASE_URL="..." ADMIN_EMAIL="admin@hugemass.com" ADMIN_PASSWORD="..." npm run seed:admin
+DATABASE_URL="postgresql://user:pass@host/dbname?sslmode=require" ADMIN_EMAIL="admin@hugemass.com" ADMIN_PASSWORD="tua-password-sicura" npm run setup:neon
 ```
+
+**Opzione B: Usando lo script standard**
+
+```bash
+DATABASE_URL="postgresql://user:pass@host/dbname?sslmode=require" ADMIN_EMAIL="admin@hugemass.com" ADMIN_PASSWORD="..." npm run seed:admin
+```
+
+**⚠️ IMPORTANTE**: 
+- Sostituisci `DATABASE_URL` con la connection string di Neon
+- Usa una password sicura per l'admin
+- Lo script creerà l'utente admin se non esiste, o aggiornerà password/ruolo se esiste già
 
 ## Step 5: Verifica Deploy
 

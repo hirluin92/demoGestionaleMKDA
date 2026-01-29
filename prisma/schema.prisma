@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,55 +8,43 @@ datasource db {
 }
 
 model User {
-  id                     String    @id @default(cuid())
-  email                  String    @unique
+  id                     String            @id @default(cuid())
+  email                  String            @unique
   password               String
   name                   String
   phone                  String?
-  role                   UserRole  @default(CLIENT)
-  collaborationStartDate DateTime? // Data inizio collaborazione
-  resetToken             String? // Token per reset password
-  resetTokenExpiry       DateTime? // Scadenza token (1 ora)
-
-  // Preferenze Notifiche
-  emailNotifications Boolean @default(true) // Notifiche email generali
-  bookingReminders   Boolean @default(true) // Promemoria prenotazioni
-  measurementUpdates Boolean @default(true) // Aggiornamenti misurazioni
-
-  // Impostazioni Sicurezza
-  loginAlerts    Boolean @default(true) // Avvisi per login sospetti
-  sessionTimeout Int     @default(30) // Timeout sessione in giorni (default 30)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  packages     Package[]
-  bookings     Booking[]
-  measurements BodyMeasurement[]
+  role                   UserRole          @default(CLIENT)
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  resetToken             String?
+  resetTokenExpiry       DateTime?
+  collaborationStartDate DateTime?
+  bookingReminders       Boolean           @default(true)
+  emailNotifications     Boolean           @default(true)
+  loginAlerts            Boolean           @default(true)
+  measurementUpdates     Boolean           @default(true)
+  sessionTimeout         Int               @default(30)
+  measurements           BodyMeasurement[]
+  bookings               Booking[]
+  packages               Package[]
 
   @@index([email])
   @@index([resetToken])
   @@map("users")
 }
 
-enum UserRole {
-  CLIENT
-  ADMIN
-}
-
 model Package {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   userId          String
   name            String
   totalSessions   Int
-  usedSessions    Int      @default(0)
-  durationMinutes Int      @default(60) // Durata sessione in minuti (default 60 = 1 ora)
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bookings Booking[]
+  usedSessions    Int       @default(0)
+  durationMinutes Int       @default(60)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  bookings        Booking[]
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isActive])
   @@index([userId])
@@ -71,27 +56,20 @@ model Booking {
   userId        String
   packageId     String
   date          DateTime
-  time          String // Format: "HH:mm"
+  time          String
   status        BookingStatus @default(CONFIRMED)
   googleEventId String?       @unique
   reminderSent  Boolean       @default(false)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
-
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  package       Package       @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, status])
   @@index([date, status])
   @@index([date, time, status])
   @@index([googleEventId])
   @@map("bookings")
-}
-
-enum BookingStatus {
-  CONFIRMED
-  CANCELLED
-  COMPLETED
 }
 
 model GoogleCalendar {
@@ -111,38 +89,39 @@ model BodyMeasurement {
   id              String   @id @default(cuid())
   userId          String
   measurementDate DateTime @default(now())
-
-  // Dati generali
-  peso    Float? // kg
-  altezza Float? // cm
-  bodyFat Float? // %
-
-  // Circonferenze Torso
-  collo   Float? // cm
-  spalle  Float? // cm
-  torace  Float? // cm
-  vita    Float? // cm
-  fianchi Float? // cm
-
-  // Circonferenze Braccia
-  bicipiteDx    Float? // cm
-  bicipiteSx    Float? // cm
-  avambraccioDx Float? // cm
-  avambraccioSx Float? // cm
-
-  // Circonferenze Gambe
-  cosciaDx    Float? // cm
-  cosciaSx    Float? // cm
-  polpaccioDx Float? // cm
-  polpaccioSx Float? // cm
-
-  notes     String? // Note opzionali
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  peso            Float?
+  altezza         Float?
+  bodyFat         Float?
+  collo           Float?
+  spalle          Float?
+  torace          Float?
+  vita            Float?
+  fianchi         Float?
+  bicipiteDx      Float?
+  bicipiteSx      Float?
+  avambraccioDx   Float?
+  avambraccioSx   Float?
+  cosciaDx        Float?
+  cosciaSx        Float?
+  polpaccioDx     Float?
+  polpaccioSx     Float?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, measurementDate])
   @@index([userId])
   @@map("body_measurements")
+}
+
+enum UserRole {
+  CLIENT
+  ADMIN
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
 }

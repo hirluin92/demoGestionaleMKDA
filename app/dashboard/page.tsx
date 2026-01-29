@@ -2,6 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { useSessionSecurity } from '@/hooks/useSessionSecurity'
 import { useEffect, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { signOut } from 'next-auth/react'
@@ -43,6 +44,7 @@ interface Package {
 export default function DashboardPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  useSessionSecurity() // Aggiunge controlli di sicurezza sulla sessione
   const [packages, setPackages] = useState<Package[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshKey, setRefreshKey] = useState(0)

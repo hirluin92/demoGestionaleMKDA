@@ -7,8 +7,20 @@ export default withAuth(
     
     // Se non c'è token, il middleware con withAuth dovrebbe già reindirizzare
     // ma aggiungiamo un controllo esplicito per sicurezza
-    if (!token) {
-      return NextResponse.redirect(new URL('/login', req.url))
+    if (!token || !token.id) {
+      // Token non valido o scaduto - reindirizza al login
+      return NextResponse.redirect(new URL('/login?error=SessionExpired', req.url))
+    }
+
+    // Verifica scadenza token (8 ore)
+    const now = Math.floor(Date.now() / 1000)
+    const tokenIat = (token as any).iat || 0
+    const tokenAge = now - tokenIat
+    const maxAge = 8 * 60 * 60 // 8 ore in secondi
+    
+    if (tokenAge > maxAge) {
+      // Token scaduto - reindirizza al login
+      return NextResponse.redirect(new URL('/login?error=SessionExpired', req.url))
     }
 
     const isAdmin = token.role === 'ADMIN'
@@ -29,8 +41,18 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token }) => {
-        // Verifica che il token esista e sia valido
-        return !!token
+        // Verifica che il token esista, sia valido e non scaduto
+        if (!token || !token.id) {
+          return false
+        }
+        
+        // Verifica scadenza
+        const now = Math.floor(Date.now() / 1000)
+        const tokenIat = (token as any).iat || 0
+        const tokenAge = now - tokenIat
+        const maxAge = 8 * 60 * 60 // 8 ore
+        
+        return tokenAge <= maxAge
       },
     },
     pages: {

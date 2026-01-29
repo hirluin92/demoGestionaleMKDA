@@ -44,14 +44,31 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id
         token.role = user.role
+        token.iat = Math.floor(Date.now() / 1000) // Issued at time
       }
+      
+      // Verifica scadenza token (8 ore)
+      const now = Math.floor(Date.now() / 1000)
+      const tokenAge = now - (token.iat as number || 0)
+      const maxAge = 8 * 60 * 60 // 8 ore in secondi
+      
+      if (tokenAge > maxAge) {
+        // Token scaduto
+        return null as any
+      }
+      
       return token
     },
     async session({ session, token }) {
+      if (!token || !token.id) {
+        // Token non valido o scaduto
+        return null as any
+      }
+      
       if (session.user) {
         session.user.id = token.id as string
         session.user.role = token.role as string
@@ -71,10 +88,11 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 giorni
+    maxAge: 8 * 60 * 60, // 8 ore (scadenza automatica)
+    updateAge: 60 * 60, // Aggiorna la sessione ogni ora se attiva
   },
   jwt: {
-    maxAge: 30 * 24 * 60 * 60, // 30 giorni
+    maxAge: 8 * 60 * 60, // 8 ore (scadenza automatica)
   },
   secret: env.NEXTAUTH_SECRET,
 }

@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Package, User } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Package, User, Mail, Phone } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
+import Button from '@/components/ui/Button'
 
 interface PackageData {
   id: string
@@ -15,12 +16,29 @@ interface PackageData {
     id: string
     name: string
     email: string
+    phone: string | null
   }
+}
+
+const PACKAGE_TYPES = [24, 48, 80] as const
+type PackageType = typeof PACKAGE_TYPES[number]
+
+interface UserWithPackage {
+  user: PackageData['user']
+  packages: Array<{
+    id: string
+    name: string
+    totalSessions: number
+    usedSessions: number
+    remaining: number
+    isActive: boolean
+  }>
 }
 
 export default function AdminPackagesList() {
   const [packages, setPackages] = useState<PackageData[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedPackageType, setSelectedPackageType] = useState<PackageType | 'all'>('all')
 
   useEffect(() => {
     fetchPackages()
@@ -39,6 +57,35 @@ export default function AdminPackagesList() {
       setLoading(false)
     }
   }
+
+  // Raggruppa pacchetti per tipo e utente
+  const usersByPackageType = useMemo(() => {
+    const filtered = selectedPackageType === 'all' 
+      ? packages 
+      : packages.filter(pkg => pkg.totalSessions === selectedPackageType)
+
+    const grouped: Record<string, UserWithPackage> = {}
+
+    filtered.forEach(pkg => {
+      const userId = pkg.user.id
+      if (!grouped[userId]) {
+        grouped[userId] = {
+          user: pkg.user,
+          packages: []
+        }
+      }
+      grouped[userId].packages.push({
+        id: pkg.id,
+        name: pkg.name,
+        totalSessions: pkg.totalSessions,
+        usedSessions: pkg.usedSessions,
+        remaining: pkg.totalSessions - pkg.usedSessions,
+        isActive: pkg.isActive
+      })
+    })
+
+    return Object.values(grouped)
+  }, [packages, selectedPackageType])
 
   if (loading) {
     return (
@@ -60,117 +107,119 @@ export default function AdminPackagesList() {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <div className="min-w-full">
-        {/* Mobile: Card Layout */}
-        <div className="md:hidden space-y-4">
-          {packages.map((pkg) => {
-            const remaining = pkg.totalSessions - pkg.usedSessions
-            const percentage = (pkg.usedSessions / pkg.totalSessions) * 100
-
-            return (
-              <div
-                key={pkg.id}
-                className="bg-dark-100/50 backdrop-blur-sm border border-dark-200/30 rounded-xl p-4 hover:border-gold-400/50 transition-all duration-300"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-gold-400 to-gold-500 flex items-center justify-center shadow-gold">
-                      <Package className="w-6 h-6 text-dark-950" />
-                    </div>
-                    <div>
-                      <h4 className="text-base font-bold text-white">{pkg.name}</h4>
-                      <p className="text-sm text-dark-600 mt-1">{pkg.user.name}</p>
-                    </div>
-                  </div>
-                  <Badge variant={pkg.isActive ? 'success' : 'warning'} size="sm">
-                    {pkg.isActive ? 'Attivo' : 'Inattivo'}
-                  </Badge>
-                </div>
-                <div className="space-y-2 pt-3 border-t border-dark-200/30">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-dark-600">Sessioni</span>
-                    <span className="font-bold text-white">
-                      {pkg.usedSessions} / {pkg.totalSessions}
-                    </span>
-                  </div>
-                  <div className="relative w-full h-2 bg-dark-200 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        remaining > 0 ? 'bg-gradient-to-r from-gold-400 to-gold-500' : 'bg-accent-danger'
-                      }`}
-                      style={{ width: `${percentage}%` }}
-                      role="progressbar"
-                      aria-valuenow={percentage}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                    />
-                  </div>
-                  <p className="text-xs text-dark-500">
-                    Creato il {new Date(pkg.createdAt).toLocaleDateString('it-IT')}
-                  </p>
-                </div>
-              </div>
-            )
-          })}
+    <div className="space-y-6">
+      {/* Selezione tipo pacchetto */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        <label className="text-sm font-semibold text-dark-600 whitespace-nowrap">
+          Filtra per tipo pacchetto:
+        </label>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={selectedPackageType === 'all' ? 'gold' : 'outline-gold'}
+            size="sm"
+            onClick={() => setSelectedPackageType('all')}
+          >
+            Tutti
+          </Button>
+          {PACKAGE_TYPES.map(type => (
+            <Button
+              key={type}
+              variant={selectedPackageType === type ? 'gold' : 'outline-gold'}
+              size="sm"
+              onClick={() => setSelectedPackageType(type)}
+            >
+              {type} lezioni
+            </Button>
+          ))}
         </div>
+      </div>
 
-        {/* Desktop: Table Layout */}
-        <div className="hidden md:block">
-          <table className="min-w-full">
-            <thead>
-              <tr className="border-b border-dark-200/30">
-                <th className="px-6 py-4 text-left text-xs font-bold text-dark-600 uppercase tracking-wider">
-                  Pacchetto
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-dark-600 uppercase tracking-wider">
-                  Cliente
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-dark-600 uppercase tracking-wider">
-                  Sessioni
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-dark-600 uppercase tracking-wider">
-                  Stato
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-dark-600 uppercase tracking-wider">
-                  Data Creazione
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-dark-200/30">
-              {packages.map((pkg) => {
-                const remaining = pkg.totalSessions - pkg.usedSessions
-                const percentage = (pkg.usedSessions / pkg.totalSessions) * 100
-
-                return (
-                  <tr key={pkg.id} className="hover:bg-dark-100/30 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <Package className="w-5 h-5 text-gold-400 mr-2" />
-                        <div className="text-sm font-bold text-white">{pkg.name}</div>
+      {/* Lista utenti con pacchetti */}
+      {usersByPackageType.length === 0 ? (
+        <div className="text-center py-12">
+          <Package className="w-12 h-12 text-dark-500 mx-auto mb-4" />
+          <p className="text-dark-600 font-semibold">
+            Nessun utente con pacchetti {selectedPackageType !== 'all' ? `da ${selectedPackageType} lezioni` : ''}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {usersByPackageType.map((userData) => (
+            <div
+              key={userData.user.id}
+              className="glass-card rounded-xl p-4 sm:p-6 hover:border-gold-400/50 transition-all duration-300"
+            >
+              {/* Header utente */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-gold-400 to-gold-500 flex items-center justify-center shadow-gold flex-shrink-0">
+                    <User className="w-6 h-6 text-dark-950" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-base sm:text-lg font-bold text-white truncate">{userData.user.name}</h4>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1">
+                      <div className="flex items-center space-x-1 text-sm text-dark-600">
+                        <Mail className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate">{userData.user.email}</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <User className="w-4 h-4 text-gold-400 mr-2" />
-                        <div>
-                          <div className="text-sm font-semibold text-white">{pkg.user.name}</div>
-                          <div className="text-sm text-dark-600">{pkg.user.email}</div>
+                      {userData.user.phone && (
+                        <div className="flex items-center space-x-1 text-sm text-dark-600">
+                          <Phone className="w-4 h-4 flex-shrink-0" />
+                          <span>{userData.user.phone}</span>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-white">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <span className="font-bold">{pkg.usedSessions} / {pkg.totalSessions}</span>
-                          <Badge variant={remaining > 0 ? 'gold' : 'danger'} size="sm">
-                            {remaining} rimaste
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Badge variant="info" size="sm" className="w-fit">
+                  {userData.packages.length} {userData.packages.length === 1 ? 'pacchetto' : 'pacchetti'}
+                </Badge>
+              </div>
+
+              {/* Lista pacchetti */}
+              <div className="space-y-3 pt-4 border-t border-dark-200/30">
+                {userData.packages.map((pkg) => {
+                  const percentage = (pkg.usedSessions / pkg.totalSessions) * 100
+                  
+                  return (
+                    <div
+                      key={pkg.id}
+                      className="bg-dark-100/30 rounded-lg p-3 sm:p-4"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                        <div className="flex items-center space-x-2">
+                          <Package className="w-5 h-5 text-gold-400 flex-shrink-0" />
+                          <div>
+                            <div className="font-bold text-white">{pkg.name}</div>
+                            <div className="text-sm text-dark-600">
+                              {pkg.totalSessions} lezioni totali
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={pkg.isActive ? 'success' : 'warning'} size="sm">
+                            {pkg.isActive ? 'Attivo' : 'Inattivo'}
+                          </Badge>
+                          <Badge variant={pkg.remaining > 0 ? 'gold' : 'danger'} size="sm">
+                            {pkg.remaining} rimaste
                           </Badge>
                         </div>
-                        <div className="w-full bg-dark-200 rounded-full h-2 max-w-xs">
+                      </div>
+                      
+                      {/* Progress bar */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-dark-600">Progresso</span>
+                          <span className="font-bold text-white">
+                            {pkg.usedSessions} / {pkg.totalSessions}
+                          </span>
+                        </div>
+                        <div className="relative w-full h-2 bg-dark-200 rounded-full overflow-hidden">
                           <div
-                            className={`h-2 rounded-full transition-all duration-500 ${
-                              remaining > 0 ? 'bg-gradient-to-r from-gold-400 to-gold-500' : 'bg-accent-danger'
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              pkg.remaining > 0 
+                                ? 'bg-gradient-to-r from-gold-400 to-gold-500' 
+                                : 'bg-accent-danger'
                             }`}
                             style={{ width: `${percentage}%` }}
                             role="progressbar"
@@ -180,22 +229,14 @@ export default function AdminPackagesList() {
                           />
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge variant={pkg.isActive ? 'success' : 'warning'} size="sm">
-                        {pkg.isActive ? 'Attivo' : 'Inattivo'}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-dark-600">
-                      {new Date(pkg.createdAt).toLocaleDateString('it-IT')}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
+      )}
     </div>
   )
 }

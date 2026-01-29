@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, addDays, subDays, startOfMonth, endOfMonth, getDay, isSameDay, parseISO, addMonths, subMonths, startOfDay } from 'date-fns'
+import { format, addDays, subDays, startOfMonth, endOfMonth, getDay, parseISO, addMonths, subMonths, startOfDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import AppointmentDetailModal from '@/components/AppointmentDetailModal'
 
 interface Booking {
   id: string
@@ -25,7 +26,7 @@ interface Booking {
   }
 }
 
-type CalendarView = 'month' | 'week' | 'day'
+type CalendarView = 'month' | 'day'
 
 interface AppointmentData {
   id: string
@@ -44,9 +45,10 @@ export default function AdminCalendar() {
   const [loading, setLoading] = useState(true)
   const [calendarView, setCalendarView] = useState<CalendarView>('day')
   const [currentMonth, setCurrentMonth] = useState(new Date())
-  const [currentWeek, setCurrentWeek] = useState(new Date())
   const [currentDay, setCurrentDay] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [selectedAppointment, setSelectedAppointment] = useState<AppointmentData | null>(null)
+  const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false)
 
   // Trasforma i booking dal formato API al formato del calendario
   const transformBookings = (bookings: Booking[]): AppointmentData[] => {
@@ -70,7 +72,7 @@ export default function AdminCalendar() {
 
   useEffect(() => {
     fetchBookings()
-  }, [calendarView, currentMonth, currentWeek, currentDay])
+  }, [calendarView, currentMonth, currentDay])
 
   const fetchBookings = async () => {
     setLoading(true)
@@ -81,9 +83,6 @@ export default function AdminCalendar() {
       if (calendarView === 'day') {
         startDate = startOfDay(currentDay)
         endDate = addDays(startDate, 1)
-      } else if (calendarView === 'week') {
-        startDate = startOfWeek(currentWeek, { weekStartsOn: 1 })
-        endDate = endOfWeek(currentWeek, { weekStartsOn: 1 })
       } else {
         // Month view - fetch tutto il mese
         startDate = startOfMonth(currentMonth)
@@ -111,17 +110,11 @@ export default function AdminCalendar() {
     return format(date, 'dd/MM/yyyy', { locale: it })
   }
 
-  // Ottieni inizio settimana (Lunedì)
-  const getStartOfWeek = (date: Date) => {
-    return startOfWeek(date, { weekStartsOn: 1 })
-  }
 
   // Navigazione
   const navigatePeriod = (direction: 'prev' | 'next') => {
     if (calendarView === 'month') {
       setCurrentMonth(direction === 'prev' ? subMonths(currentMonth, 1) : addMonths(currentMonth, 1))
-    } else if (calendarView === 'week') {
-      setCurrentWeek(direction === 'prev' ? subDays(currentWeek, 7) : addDays(currentWeek, 7))
     } else {
       setCurrentDay(direction === 'prev' ? subDays(currentDay, 1) : addDays(currentDay, 1))
     }
@@ -130,7 +123,6 @@ export default function AdminCalendar() {
   const goToToday = () => {
     const today = new Date()
     setCurrentMonth(new Date(today))
-    setCurrentWeek(new Date(today))
     setCurrentDay(new Date(today))
   }
 
@@ -203,7 +195,11 @@ export default function AdminCalendar() {
             </p>
             <div className="space-y-2">
               {appointmentsByDate[selectedDate].map(apt => (
-                <div key={apt.id} className="glass-card rounded-lg p-3">
+                <div 
+                  key={apt.id} 
+                  className="glass-card rounded-lg p-3 cursor-pointer hover:border-gold-400/50 transition-all duration-300"
+                  onClick={() => showAppointmentDetail(apt)}
+                >
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="font-semibold text-white">{apt.client_name}</p>
@@ -222,107 +218,20 @@ export default function AdminCalendar() {
     )
   }
 
-  // VISTA SETTIMANA
-  const renderWeekView = () => {
-    const startOfWeekDate = getStartOfWeek(currentWeek)
-    const weekDays = eachDayOfInterval({ start: startOfWeekDate, end: addDays(startOfWeekDate, 6) })
-    const today = new Date()
-
-    // Ore visibili: 8:00 - 22:00 (15 ore)
-    const hours = Array.from({ length: 15 }, (_, i) => i + 8)
-
-    // Raggruppa appuntamenti per data e ora
-    const appointmentsByDateTime: Record<string, AppointmentData[]> = {}
-    allAppointments.forEach(apt => {
-      const hour = parseInt(apt.time.split(':')[0])
-      if (hour >= 8 && hour <= 22) {
-        const key = `${apt.date}-${hour}`
-        if (!appointmentsByDateTime[key]) {
-          appointmentsByDateTime[key] = []
-        }
-        appointmentsByDateTime[key].push(apt)
-      }
-    })
-
-    const dayNames = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
-
-    return (
-      <div className="space-y-4">
-        {/* Headers giorni settimana */}
-        <div className="grid grid-cols-8 gap-2 mb-4">
-          <div></div> {/* Spazio per colonna orari */}
-          {weekDays.map((date, i) => {
-            const isToday = isSameDay(date, today)
-            return (
-              <div
-                key={i}
-                className={`text-center p-2 glass-card rounded-lg ${isToday ? 'border-2 border-[#E8DCA0]' : ''}`}
-              >
-                <div className="text-xs text-gray-400">{dayNames[i]}</div>
-                <div className={`font-bold ${isToday ? 'gold-text-gradient heading-font' : 'text-white'}`}>
-                  {format(date, 'd')}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Griglia oraria settimanale - struttura allineata */}
-        <div className="space-y-1">
-          {hours.map((hour) => {
-            return (
-              <div key={hour} className="grid grid-cols-8 gap-2">
-                {/* Etichetta oraria */}
-                <div className="time-label flex items-center justify-center">
-                  {String(hour).padStart(2, '0')}:00
-                </div>
-
-                {/* Slot per ogni giorno della settimana */}
-                {weekDays.map((date, dayIndex) => {
-                  const dateStr = format(date, 'yyyy-MM-dd')
-                  const key = `${dateStr}-${hour}`
-                  const hasAppointment = appointmentsByDateTime[key]?.length > 0
-
-                  return (
-                    <div
-                      key={`${dayIndex}-${hour}`}
-                      className={`time-slot min-h-[60px] ${hasAppointment ? 'has-appointment' : ''}`}
-                    >
-                      {hasAppointment && appointmentsByDateTime[key].map(apt => (
-                        <div
-                          key={apt.id}
-                          className="appointment-block"
-                          onClick={() => showAppointmentDetail(apt)}
-                        >
-                          <div className="text-xs font-bold text-white">{apt.time}</div>
-                          <div className="text-xs truncate text-white">{apt.client_name}</div>
-                          <div className="text-xs text-gray-400 truncate">{apt.service}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    )
-  }
 
   // VISTA GIORNO
   const renderDayView = () => {
     const dateStr = format(currentDay, 'yyyy-MM-dd')
     const dayAppointments = allAppointments.filter(a => a.date === dateStr)
 
-    // Ore visibili: 8:00 - 22:00 (15 ore)
-    const hours = Array.from({ length: 15 }, (_, i) => i + 8)
+    // Ore visibili: 6:00 - 22:00 (17 ore)
+    const hours = Array.from({ length: 17 }, (_, i) => i + 6)
 
     // Raggruppa per ora
     const appointmentsByHour: Record<number, AppointmentData[]> = {}
     dayAppointments.forEach(apt => {
       const hour = parseInt(apt.time.split(':')[0])
-      if (hour >= 8 && hour <= 22) {
+      if (hour >= 6 && hour <= 22) {
         if (!appointmentsByHour[hour]) {
           appointmentsByHour[hour] = []
         }
@@ -337,7 +246,7 @@ export default function AdminCalendar() {
           <h3 className="text-xl font-bold gold-text-gradient heading-font mb-2">
             {dayAppointments.length} Appuntament{dayAppointments.length !== 1 ? 'i' : 'o'}
           </h3>
-          <p className="text-sm text-gray-400">Orario: 08:00 - 22:00</p>
+          <p className="text-sm text-gray-400">Orario: 06:00 - 22:00</p>
         </div>
 
         {/* Griglia giornaliera */}
@@ -346,15 +255,18 @@ export default function AdminCalendar() {
             const hasAppointment = appointmentsByHour[hour]?.length > 0
 
             return (
-              <div key={hour} className="grid grid-cols-12 gap-2">
-                <div className="col-span-1 time-label flex items-center">
+              <div 
+                key={hour} 
+                className={`grid grid-cols-12 gap-2 ${hasAppointment ? 'min-h-[80px]' : 'min-h-[30px]'}`}
+              >
+                <div className="col-span-1 time-label flex items-center text-sm">
                   {String(hour).padStart(2, '0')}:00
                 </div>
-                <div className={`col-span-11 time-slot min-h-[60px] ${hasAppointment ? 'has-appointment' : ''}`}>
+                <div className={`col-span-11 time-slot ${hasAppointment ? 'has-appointment min-h-[80px]' : 'min-h-[20px]'}`}>
                   {hasAppointment && appointmentsByHour[hour].map(apt => (
                     <div
                       key={apt.id}
-                      className="appointment-block"
+                      className="appointment-block cursor-pointer"
                       onClick={() => showAppointmentDetail(apt)}
                     >
                       <div className="flex justify-between items-start">
@@ -387,18 +299,14 @@ export default function AdminCalendar() {
 
   // Mostra dettaglio appuntamento
   const showAppointmentDetail = (apt: AppointmentData) => {
-    // Puoi implementare un modal qui
-    alert(`Appuntamento:\n${apt.client_name}\n${apt.date} ${apt.time}\n${apt.service}\n${apt.status}`)
+    setSelectedAppointment(apt)
+    setIsAppointmentModalOpen(true)
   }
 
   // Periodo corrente per il display
   const getCurrentPeriod = () => {
     if (calendarView === 'month') {
       return format(currentMonth, 'MMMM yyyy', { locale: it })
-    } else if (calendarView === 'week') {
-      const start = getStartOfWeek(currentWeek)
-      const end = addDays(start, 6)
-      return `${format(start, 'd MMM', { locale: it })} - ${format(end, 'd MMM yyyy', { locale: it })}`
     } else {
       return format(currentDay, 'EEEE d MMMM yyyy', { locale: it })
     }
@@ -449,13 +357,6 @@ export default function AdminCalendar() {
             Mese
           </button>
           <button
-            className={`calendar-view-btn ${calendarView === 'week' ? 'active' : ''}`}
-            onClick={() => setCalendarView('week')}
-            data-view="week"
-          >
-            Settimana
-          </button>
-          <button
             className={`calendar-view-btn ${calendarView === 'day' ? 'active' : ''}`}
             onClick={() => setCalendarView('day')}
             data-view="day"
@@ -475,11 +376,22 @@ export default function AdminCalendar() {
         ) : (
           <>
             {calendarView === 'month' && renderMonthView()}
-            {calendarView === 'week' && renderWeekView()}
             {calendarView === 'day' && renderDayView()}
           </>
         )}
       </div>
+
+      {/* Appointment Detail Modal */}
+      {selectedAppointment && (
+        <AppointmentDetailModal
+          appointment={selectedAppointment}
+          isOpen={isAppointmentModalOpen}
+          onClose={() => {
+            setIsAppointmentModalOpen(false)
+            setSelectedAppointment(null)
+          }}
+        />
+      )}
     </div>
   )
 }

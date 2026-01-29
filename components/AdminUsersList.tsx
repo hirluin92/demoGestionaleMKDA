@@ -20,6 +20,15 @@ interface UserData {
     totalSessions: number
     usedSessions: number
   }>
+  userPackages?: Array<{
+    id: string
+    usedSessions: number
+    package: {
+      id: string
+      name: string
+      totalSessions: number
+    }
+  }>
   _count: {
     bookings: number
   }
@@ -55,15 +64,28 @@ export default function AdminUsersList() {
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null)
   const [bookingToCancel, setBookingToCancel] = useState<{ id: string; userId: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [selectedPackageId, setSelectedPackageId] = useState<string>('')
+  const [packages, setPackages] = useState<Array<{ id: string; name: string; totalSessions: number }>>([])
 
   useEffect(() => {
     fetchUsers()
-  }, [sortBy, sortOrder])
+  }, [sortBy, sortOrder, selectedPackageId])
+
+  useEffect(() => {
+    fetchPackages()
+  }, [])
 
   const fetchUsers = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/admin/users?sortBy=${sortBy}&sortOrder=${sortOrder}`)
+      const url = new URL('/api/admin/users', window.location.origin)
+      url.searchParams.set('sortBy', sortBy)
+      url.searchParams.set('sortOrder', sortOrder)
+      if (selectedPackageId) {
+        url.searchParams.set('packageId', selectedPackageId)
+      }
+      
+      const response = await fetch(url.toString())
       if (response.ok) {
         const data = await response.json()
         setUsers(data)
@@ -74,6 +96,22 @@ export default function AdminUsersList() {
       console.error('Errore recupero utenti:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchPackages = async () => {
+    try {
+      const response = await fetch('/api/admin/packages')
+      if (response.ok) {
+        const data = await response.json()
+        // Estrai i pacchetti unici (potrebbero esserci duplicati se un pacchetto è assegnato a più utenti)
+        const uniquePackages = Array.from(
+          new Map(data.map((pkg: any) => [pkg.id, { id: pkg.id, name: pkg.name, totalSessions: pkg.totalSessions }])).values()
+        )
+        setPackages(uniquePackages)
+      }
+    } catch (error) {
+      console.error('Errore recupero pacchetti:', error)
     }
   }
 
@@ -200,24 +238,49 @@ export default function AdminUsersList() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Ordinamento */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-dark-600">Ordina per:</span>
-          <Button
-            variant={sortBy === 'name' ? 'gold' : 'outline-gold'}
-            size="sm"
-            onClick={() => handleSort('name')}
-          >
-            Cliente {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
-          </Button>
-          <Button
-            variant={sortBy === 'collaborationStartDate' ? 'gold' : 'outline-gold'}
-            size="sm"
-            onClick={() => handleSort('collaborationStartDate')}
-          >
-            Inizio Collaborazione {sortBy === 'collaborationStartDate' && (sortOrder === 'asc' ? '↑' : '↓')}
-          </Button>
+      {/* Filtri e Ordinamento */}
+      <div className="flex flex-col gap-4">
+        {/* Filtro per Pacchetto */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <label className="text-sm font-semibold text-dark-600 whitespace-nowrap">
+            Filtra per pacchetto:
+          </label>
+          <div className="relative flex-1 max-w-xs">
+            <select
+              value={selectedPackageId}
+              onChange={(e) => setSelectedPackageId(e.target.value)}
+              className="input-field w-full appearance-none pr-10"
+            >
+              <option value="">Tutti i clienti</option>
+              {packages.map((pkg) => (
+                <option key={pkg.id} value={pkg.id}>
+                  {pkg.name} ({pkg.totalSessions} sessioni)
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 pointer-events-none" aria-hidden="true" />
+          </div>
+        </div>
+
+        {/* Ordinamento */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-dark-600">Ordina per:</span>
+            <Button
+              variant={sortBy === 'name' ? 'gold' : 'outline-gold'}
+              size="sm"
+              onClick={() => handleSort('name')}
+            >
+              Cliente {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+            </Button>
+            <Button
+              variant={sortBy === 'collaborationStartDate' ? 'gold' : 'outline-gold'}
+              size="sm"
+              onClick={() => handleSort('collaborationStartDate')}
+            >
+              Inizio Collaborazione {sortBy === 'collaborationStartDate' && (sortOrder === 'asc' ? '↑' : '↓')}
+            </Button>
+          </div>
         </div>
       </div>
 

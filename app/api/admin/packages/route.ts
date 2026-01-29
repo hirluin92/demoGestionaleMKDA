@@ -8,7 +8,7 @@ import { z } from 'zod'
 export const dynamic = 'force-dynamic'
 
 const createPackageSchema = z.object({
-  userId: z.string(),
+  userIds: z.array(z.string()).min(1, 'Seleziona almeno un cliente'),
   name: z.string().min(1),
   totalSessions: z.number().int().positive(),
   durationMinutes: z.number().int().positive().optional().default(60), // Default 60 minuti
@@ -31,6 +31,18 @@ export async function GET(request: NextRequest) {
             name: true,
             email: true,
             phone: true,
+          },
+        },
+        userPackages: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+              },
+            },
           },
         },
       },
@@ -59,35 +71,47 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { userId, name, totalSessions, durationMinutes } = createPackageSchema.parse(body)
+    const { userIds, name, totalSessions, durationMinutes } = createPackageSchema.parse(body)
 
-    // Verifica che l'utente esista
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
+    // Verifica che tutti gli utenti esistano
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
     })
 
-    if (!user) {
+    if (users.length !== userIds.length) {
       return NextResponse.json(
-        { error: 'Utente non trovato' },
+        { error: 'Uno o più utenti non trovati' },
         { status: 404 }
       )
     }
 
+    // Crea il pacchetto (senza userId per la relazione uno-a-molti)
     const packageData = await prisma.package.create({
       data: {
-        userId,
         name,
         totalSessions,
         durationMinutes: durationMinutes || 60, // Default 60 minuti se non specificato
         usedSessions: 0,
         isActive: true,
+        // Crea le relazioni molti-a-molti
+        userPackages: {
+          create: userIds.map(userId => ({
+            userId,
+            usedSessions: 0,
+          })),
+        },
       },
       include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+        userPackages: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+              },
+            },
           },
         },
       },

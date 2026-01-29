@@ -53,7 +53,13 @@ export async function GET(request: NextRequest) {
             status: 'CONFIRMED',
             date: { gte: startOfDay, lte: endOfDay },
           },
-          select: { time: true },
+          include: {
+            package: {
+              select: {
+                durationMinutes: true,
+              },
+            },
+          },
         })
         
         const allSlots: string[] = []
@@ -63,8 +69,36 @@ export async function GET(request: NextRequest) {
           }
         }
         
-        const occupied = dbBookings.map(b => b.time)
-        let available = allSlots.filter(slot => !occupied.includes(slot))
+        // Filtra slot considerando sovrapposizioni (durata standard 60 minuti)
+        const defaultDurationMinutes = 60
+        let available = allSlots.filter(slot => {
+          const [slotHour, slotMinute] = slot.split(':').map(Number)
+          const slotStart = new Date(0, 0, 0, slotHour, slotMinute)
+          const slotEnd = new Date(slotStart)
+          slotEnd.setMinutes(slotEnd.getMinutes() + defaultDurationMinutes)
+          
+          // Verifica sovrapposizioni
+          const hasOverlap = dbBookings.some(booking => {
+            const bookingDate = new Date(booking.date)
+            
+            if (
+              bookingDate.getFullYear() !== selectedDate.getFullYear() ||
+              bookingDate.getMonth() !== selectedDate.getMonth() ||
+              bookingDate.getDate() !== selectedDate.getDate()
+            ) {
+              return false
+            }
+            
+            const [bookingHour, bookingMinute] = booking.time.split(':').map(Number)
+            const bookingStart = new Date(0, 0, 0, bookingHour, bookingMinute)
+            const bookingEnd = new Date(bookingStart)
+            bookingEnd.setMinutes(bookingEnd.getMinutes() + (booking.package.durationMinutes || 60))
+            
+            return slotStart.getTime() < bookingEnd.getTime() && slotEnd.getTime() > bookingStart.getTime()
+          })
+          
+          return !hasOverlap
+        })
         
         // Se la data è oggi, filtra anche gli orari passati
         const now = new Date()

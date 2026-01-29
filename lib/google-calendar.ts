@@ -320,8 +320,47 @@ export async function getAvailableSlots(date: Date) {
   // Combina slot occupati da database e Google Calendar
   const allOccupiedSlots = [...new Set([...occupiedSlotsFromDB, ...occupiedSlotsFromCalendar])]
 
-  // Filtra slot disponibili (non occupati)
-  let availableSlots = allSlots.filter(slot => !allOccupiedSlots.includes(slot))
+  // Filtra slot disponibili considerando sovrapposizioni
+  // Per ogni slot, verifica se può essere prenotato senza sovrapporsi con prenotazioni esistenti
+  // Assumiamo una durata standard di 60 minuti per verificare disponibilità
+  // (la durata effettiva sarà verificata al momento della prenotazione)
+  const defaultDurationMinutes = 60
+  
+  let availableSlots = allSlots.filter(slot => {
+    const [slotHour, slotMinute] = slot.split(':').map(Number)
+    
+    // Calcola orario di fine per questo slot (assumendo durata standard)
+    const slotStart = new Date(0, 0, 0, slotHour, slotMinute)
+    const slotEnd = new Date(slotStart)
+    slotEnd.setMinutes(slotEnd.getMinutes() + defaultDurationMinutes)
+    
+    // Verifica se questo slot si sovrappone con prenotazioni esistenti
+    const hasOverlap = dbBookings.some(booking => {
+      const bookingDate = new Date(booking.date)
+      const selectedDate = new Date(date)
+      
+      // Verifica che sia lo stesso giorno
+      if (
+        bookingDate.getFullYear() !== selectedDate.getFullYear() ||
+        bookingDate.getMonth() !== selectedDate.getMonth() ||
+        bookingDate.getDate() !== selectedDate.getDate()
+      ) {
+        return false
+      }
+      
+      const [bookingHour, bookingMinute] = booking.time.split(':').map(Number)
+      const bookingStart = new Date(0, 0, 0, bookingHour, bookingMinute)
+      const bookingEnd = new Date(bookingStart)
+      bookingEnd.setMinutes(bookingEnd.getMinutes() + (booking.package.durationMinutes || 60))
+      
+      // Due prenotazioni si sovrappongono se:
+      // slotStart < bookingEnd AND slotEnd > bookingStart
+      return slotStart.getTime() < bookingEnd.getTime() && slotEnd.getTime() > bookingStart.getTime()
+    })
+    
+    // Lo slot è disponibile se non c'è sovrapposizione E non è già occupato
+    return !hasOverlap && !allOccupiedSlots.includes(slot)
+  })
 
   // Se la data è oggi, filtra anche gli orari passati
   const now = new Date()

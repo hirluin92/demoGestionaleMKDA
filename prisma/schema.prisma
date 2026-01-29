@@ -26,7 +26,8 @@ model User {
   sessionTimeout         Int               @default(30)
   measurements           BodyMeasurement[]
   bookings               Booking[]
-  packages               Package[]
+  packages               Package[]         // Relazione uno-a-molti (per compatibilità)
+  userPackages           UserPackage[]      // Relazione molti-a-molti
 
   @@index([email])
   @@index([resetToken])
@@ -34,21 +35,38 @@ model User {
 }
 
 model Package {
-  id              String    @id @default(cuid())
-  userId          String
+  id              String        @id @default(cuid())
+  userId          String?       // Opzionale per compatibilità con dati esistenti
   name            String
   totalSessions   Int
-  usedSessions    Int       @default(0)
-  durationMinutes Int       @default(60)
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  usedSessions    Int           @default(0)
+  durationMinutes Int           @default(60)
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   bookings        Booking[]
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User?         @relation(fields: [userId], references: [id], onDelete: Cascade) // Relazione uno-a-molti (per compatibilità)
+  userPackages    UserPackage[] // Relazione molti-a-molti
 
   @@index([userId, isActive])
   @@index([userId])
   @@map("packages")
+}
+
+model UserPackage {
+  id            String   @id @default(cuid())
+  userId        String
+  packageId     String
+  usedSessions  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package       Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, packageId])
+  @@index([userId])
+  @@index([packageId])
+  @@map("user_packages")
 }
 
 model Booking {

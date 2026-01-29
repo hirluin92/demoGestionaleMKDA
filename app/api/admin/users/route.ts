@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const sortBy = searchParams.get('sortBy') || 'name' // 'name' | 'collaborationStartDate'
     const sortOrder = searchParams.get('sortOrder') || 'asc' // 'asc' | 'desc'
+    const packageId = searchParams.get('packageId') // Filtro per pacchetto
 
     // Valida sortOrder - deve essere 'asc' o 'desc'
     const validSortOrder = (sortOrder === 'desc' ? 'desc' : 'asc') as 'asc' | 'desc'
@@ -59,13 +60,41 @@ export async function GET(request: NextRequest) {
       orderBy = { name: 'asc' }
     }
 
+    // Costruisci la condizione where
+    const where: any = {
+      role: 'CLIENT',
+    }
+
+    // Se è specificato un packageId, filtra gli utenti che hanno quel pacchetto
+    if (packageId) {
+      where.userPackages = {
+        some: {
+          packageId: packageId,
+        },
+      }
+    }
+
     const users = await prisma.user.findMany({
-      where: {
-        role: 'CLIENT',
-      },
+      where,
       include: {
         packages: {
           where: { isActive: true },
+        },
+        userPackages: {
+          where: {
+            package: {
+              isActive: true,
+            },
+          },
+          include: {
+            package: {
+              select: {
+                id: true,
+                name: true,
+                totalSessions: true,
+              },
+            },
+          },
         },
         _count: {
           select: {

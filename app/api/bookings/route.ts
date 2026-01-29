@@ -162,17 +162,59 @@ export async function POST(request: NextRequest) {
 
     // STEP 3: Transazione atomica per DB (booking + package update)
     const booking = await prisma.$transaction(async (tx) => {
-      // Verifica slot non duplicato (dentro transazione per lock)
-      const existingBooking = await tx.booking.findFirst({
+      // Verifica sovrapposizioni con prenotazioni esistenti
+      // Recupera tutte le prenotazioni confermate per quella data
+      const startOfDay = new Date(bookingDate)
+      startOfDay.setHours(0, 0, 0, 0)
+      const endOfDay = new Date(bookingDate)
+      endOfDay.setHours(23, 59, 59, 999)
+      
+      const existingBookings = await tx.booking.findMany({
         where: {
-          date: bookingDate,
-          time: time,
           status: 'CONFIRMED',
+          date: {
+            gte: startOfDay,
+            lte: endOfDay,
+          },
+        },
+        include: {
+          package: {
+            select: {
+              durationMinutes: true,
+            },
+          },
         },
       })
 
-      if (existingBooking) {
-        throw new Error('Questo orario è già stato prenotato')
+      // Verifica sovrapposizioni
+      const hasOverlap = existingBookings.some(existing => {
+        const existingDate = new Date(existing.date)
+        const [existingHour, existingMinute] = existing.time.split(':').map(Number)
+        
+        // Verifica che sia lo stesso giorno
+        if (
+          existingDate.getFullYear() !== bookingDate.getFullYear() ||
+          existingDate.getMonth() !== bookingDate.getMonth() ||
+          existingDate.getDate() !== bookingDate.getDate()
+        ) {
+          return false
+        }
+        
+        const existingStart = new Date(0, 0, 0, existingHour, existingMinute)
+        const existingEnd = new Date(existingStart)
+        existingEnd.setMinutes(existingEnd.getMinutes() + (existing.package.durationMinutes || 60))
+        
+        const newStart = new Date(0, 0, 0, hours, minutes)
+        const newEnd = new Date(newStart)
+        newEnd.setMinutes(newEnd.getMinutes() + (packageData.durationMinutes || 60))
+        
+        // Due prenotazioni si sovrappongono se:
+        // newStart < existingEnd AND newEnd > existingStart
+        return newStart.getTime() < existingEnd.getTime() && newEnd.getTime() > existingStart.getTime()
+      })
+
+      if (hasOverlap) {
+        throw new Error('Questo orario si sovrappone con una prenotazione esistente')
       }
 
       // Ricontrolla sessioni disponibili (dentro transazione per evitare race)

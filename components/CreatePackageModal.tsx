@@ -18,8 +18,8 @@ interface CreatePackageModalProps {
 
 export default function CreatePackageModal({ onClose, onSuccess }: CreatePackageModalProps) {
   const [users, setUsers] = useState<User[]>([])
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [formData, setFormData] = useState({
-    userId: '',
     name: '',
     totalSessions: '10',
     durationMinutes: '60',
@@ -70,6 +70,12 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
       return
     }
 
+    if (selectedUserIds.length === 0) {
+      setError('Seleziona almeno un cliente')
+      setLoading(false)
+      return
+    }
+
     try {
       const response = await fetch('/api/admin/packages', {
         method: 'POST',
@@ -77,7 +83,8 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...formData,
+          userIds: selectedUserIds,
+          name: formData.name,
           totalSessions,
           durationMinutes,
         }),
@@ -144,29 +151,46 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
 
           <div>
             <label
-              htmlFor="userId"
               className="block text-sm font-light mb-2 heading-font"
               style={{ letterSpacing: '0.5px', color: '#E8DCA0' }}
             >
-              Cliente
+              Clienti (seleziona uno o più)
             </label>
-            <div className="relative">
-              <select
-                id="userId"
-                value={formData.userId}
-                onChange={(e) => handleInputChange('userId', e.target.value)}
-                required
-                className="input-field w-full appearance-none pr-10"
-              >
-                <option value="">-- Seleziona un cliente --</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} ({user.email})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 pointer-events-none" aria-hidden="true" />
+            <div className="max-h-48 overflow-y-auto border border-dark-700 rounded-lg p-4 bg-dark-900/50">
+              {users.length === 0 ? (
+                <p className="text-dark-500 text-sm">Nessun cliente disponibile</p>
+              ) : (
+                <div className="space-y-2">
+                  {users.map((user) => (
+                    <label
+                      key={user.id}
+                      className="flex items-center gap-3 p-2 rounded hover:bg-dark-800/50 cursor-pointer transition"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedUserIds.includes(user.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedUserIds([...selectedUserIds, user.id])
+                          } else {
+                            setSelectedUserIds(selectedUserIds.filter(id => id !== user.id))
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-dark-600 bg-dark-900 text-gold-500 focus:ring-gold-500 focus:ring-2"
+                      />
+                      <span className="text-sm text-white">
+                        {user.name} ({user.email})
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
+            {selectedUserIds.length > 0 && (
+              <p className="mt-2 text-xs text-dark-600">
+                {selectedUserIds.length} cliente{selectedUserIds.length > 1 ? 'i' : ''} selezionato{selectedUserIds.length > 1 ? 'i' : ''}
+              </p>
+            )}
           </div>
 
           <div>

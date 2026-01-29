@@ -7,8 +7,12 @@ export function Particles() {
     const container = document.getElementById('particles-container')
     if (!container) return
 
+    // Detect mobile device
+    const isMobile = window.innerWidth <= 768
+    const particleCount = isMobile ? 30 : 20 // Più particelle su mobile per compensare la visibilità
+
     // Create particles
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < particleCount; i++) {
       const particle = document.createElement('div')
       particle.className = 'particle'
       particle.style.left = Math.random() * 100 + '%'

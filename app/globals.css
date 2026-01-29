@@ -110,6 +110,36 @@
   box-shadow: 0 0 8px rgba(250, 245, 200, 0.3), 0 0 15px rgba(255, 250, 220, 0.15);
 }
 
+/* Particelle più grandi e visibili su mobile */
+@media (max-width: 768px) {
+  .particle {
+    width: 6px;
+    height: 6px;
+    background: radial-gradient(circle, rgba(250, 245, 200, 0.7) 0%, rgba(255, 250, 220, 0.4) 40%, transparent 70%);
+    box-shadow: 0 0 12px rgba(250, 245, 200, 0.6), 0 0 20px rgba(255, 250, 220, 0.4);
+  }
+  
+  @keyframes float-particle {
+    0% {
+      transform: translateY(100vh) translateX(0) scale(0);
+      opacity: 0;
+    }
+    5% {
+      opacity: 0.9;
+    }
+    50% {
+      opacity: 1;
+    }
+    95% {
+      opacity: 0.9;
+    }
+    100% {
+      transform: translateY(-100px) translateX(var(--tx)) scale(1.2);
+      opacity: 0;
+    }
+  }
+}
+
 @keyframes float-particle {
   0% {
     transform: translateY(100vh) translateX(0) scale(0);

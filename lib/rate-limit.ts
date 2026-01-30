@@ -64,46 +64,14 @@ class InMemoryRateLimiter {
 }
 
 /**
- * Rate limiter persistente usando Vercel KV
- * Fallback a in-memory se KV non è configurato
+ * Rate limiter persistente (attualmente usa in-memory)
+ * @vercel/kv è deprecato, in futuro si può migrare a @upstash/redis se necessario
  */
 class PersistentRateLimiter {
-  private kv: any = null
-  private kvInitialized = false
   private fallback: InMemoryRateLimiter
   
   constructor(private config: RateLimitConfig) {
     this.fallback = new InMemoryRateLimiter(config)
-  }
-
-  private async initializeKV() {
-    if (this.kvInitialized) return
-    
-    // Solo server-side
-    if (typeof window !== 'undefined') {
-      this.kvInitialized = true
-      return
-    }
-
-    try {
-      const { kv } = await import('@vercel/kv')
-      const { env } = await import('./env')
-      
-      if (env.KV_REST_API_URL && env.KV_REST_API_TOKEN) {
-        this.kv = kv({
-          url: env.KV_REST_API_URL,
-          token: env.KV_REST_API_TOKEN,
-        })
-      }
-    } catch (error) {
-      // KV non disponibile, usa fallback
-      // Non loggare in produzione per evitare spam
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('⚠️  Vercel KV non disponibile, usando rate limiter in-memory')
-      }
-    } finally {
-      this.kvInitialized = true
-    }
   }
 
   async check(identifier: string): Promise<{
@@ -112,56 +80,9 @@ class PersistentRateLimiter {
     remaining: number
     reset: Date
   }> {
-    // Inizializza KV al primo check (lazy initialization)
-    await this.initializeKV()
-    
-    // Se KV non è disponibile, usa fallback
-    if (!this.kv) {
-      return this.fallback.check(identifier)
-    }
-
-    try {
-      const now = Date.now()
-      const windowStart = now - this.config.windowMs
-      const key = `rate_limit:${identifier}`
-      
-      // Recupera richieste esistenti
-      const existingRequests: number[] = await this.kv.get(key) || []
-      
-      // Filtra solo quelle nella finestra corrente
-      const recentRequests = existingRequests.filter((time: number) => time > windowStart)
-      
-      // Check limite
-      if (recentRequests.length >= this.config.maxRequests) {
-        return {
-          success: false,
-          limit: this.config.maxRequests,
-          remaining: 0,
-          reset: new Date(windowStart + this.config.windowMs)
-        }
-      }
-      
-      // Aggiungi nuova richiesta
-      recentRequests.push(now)
-      
-      // Salva in KV con TTL basato sulla finestra temporale
-      const ttlSeconds = Math.ceil(this.config.windowMs / 1000)
-      await this.kv.set(key, recentRequests, { ex: ttlSeconds })
-      
-      return {
-        success: true,
-        limit: this.config.maxRequests,
-        remaining: this.config.maxRequests - recentRequests.length,
-        reset: new Date(windowStart + this.config.windowMs)
-      }
-    } catch (error) {
-      // In caso di errore KV, fallback a in-memory
-      // Non loggare in produzione per evitare spam
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('⚠️  Errore KV rate limiter, usando fallback in-memory:', error)
-      }
-      return this.fallback.check(identifier)
-    }
+    // Usa il fallback in-memory (funziona correttamente per il deployment)
+    // In futuro, se necessario, si può migrare a @upstash/redis
+    return this.fallback.check(identifier)
   }
 }
 

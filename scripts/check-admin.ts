@@ -3,42 +3,57 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
-  const admin = await prisma.user.findUnique({
-    where: { email: 'admin@hugemass.com' },
+  console.log('🔍 Verifica utenti admin nel database...\n')
+
+  // Trova tutti gli utenti admin
+  const adminUsers = await prisma.user.findMany({
+    where: {
+      role: 'ADMIN',
+    },
     select: {
       id: true,
+      email: true,
+      name: true,
+      role: true,
+      createdAt: true,
+    },
+  })
+
+  if (adminUsers.length === 0) {
+    console.log('❌ Nessun utente admin trovato nel database!')
+    console.log('\n💡 Esegui: npm run seed:admin')
+  } else {
+    console.log(`✅ Trovati ${adminUsers.length} utente/i admin:\n`)
+    adminUsers.forEach((admin, index) => {
+      console.log(`${index + 1}. Email: ${admin.email}`)
+      console.log(`   Nome: ${admin.name}`)
+      console.log(`   ID: ${admin.id}`)
+      console.log(`   Creato: ${admin.createdAt.toLocaleString('it-IT')}`)
+      console.log('')
+    })
+  }
+
+  // Mostra anche tutti gli utenti
+  const allUsers = await prisma.user.findMany({
+    select: {
       email: true,
       name: true,
       role: true,
     },
   })
 
-  if (admin) {
-    console.log('✅ Admin trovato:')
-    console.log(JSON.stringify(admin, null, 2))
-    
-    if (admin.role !== 'ADMIN') {
-      console.log('⚠️  ATTENZIONE: Il ruolo non è ADMIN!')
-      console.log('Eseguendo correzione...')
-      
-      await prisma.user.update({
-        where: { email: 'admin@hugemass.com' },
-        data: { role: 'ADMIN' },
-      })
-      
-      console.log('✅ Ruolo corretto a ADMIN')
-    } else {
-      console.log('✅ Ruolo corretto: ADMIN')
-    }
-  } else {
-    console.log('❌ Admin non trovato!')
-    console.log('Esegui: npm run seed:admin')
+  console.log(`\n📊 Totale utenti nel database: ${allUsers.length}`)
+  if (allUsers.length > 0) {
+    console.log('\nTutti gli utenti:')
+    allUsers.forEach((user, index) => {
+      console.log(`${index + 1}. ${user.email} (${user.role}) - ${user.name}`)
+    })
   }
 }
 
 main()
   .catch((e) => {
-    console.error(e)
+    console.error('Errore:', e)
     process.exit(1)
   })
   .finally(async () => {

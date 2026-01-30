@@ -371,7 +371,9 @@ export default function AdminPackagesList() {
                         <div className="flex items-center space-x-2">
                           <Package className="w-5 h-5 text-gold-400 flex-shrink-0" />
                           <div>
-                            <div className="font-bold text-white">{pkg.name}</div>
+                            <div className="font-bold text-white">
+                              {pkg.athletes && pkg.athletes.length > 0 ? 'Multiplo' : 'Singolo'}
+                            </div>
                             <div className="text-sm text-dark-600">
                               {pkg.totalSessions} lezioni totali
                             </div>
@@ -464,7 +466,7 @@ export default function AdminPackagesList() {
           }}
           onConfirm={handleDeletePackageConfirm}
           title="Elimina Pacchetto"
-          message={`Sei sicuro di voler eliminare il pacchetto "${packageToDelete.name}"? Questa azione è irreversibile. Il pacchetto può essere eliminato solo se non ci sono prenotazioni attive associate.`}
+          message="Sei sicuro di voler eliminare questo pacchetto? Questa azione è irreversibile. Il pacchetto può essere eliminato solo se non ci sono prenotazioni attive associate."
           confirmText="Elimina"
           cancelText="Annulla"
           variant="danger"

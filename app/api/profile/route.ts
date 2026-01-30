@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logger, sanitizeError } from '@/lib/logger'
 import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(user)
   } catch (error) {
-    console.error('Errore recupero profilo:', error)
+    logger.error('Errore recupero profilo', { error: sanitizeError(error) })
     return NextResponse.json(
       { error: 'Errore interno del server' },
       { status: 500 }
@@ -129,7 +130,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    console.error('Errore aggiornamento profilo:', error)
+    logger.error('Errore aggiornamento profilo', { error: sanitizeError(error) })
     return NextResponse.json(
       { error: 'Errore interno del server' },
       { status: 500 }

@@ -51,6 +51,11 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().email().optional(),
   
+  // Vercel KV (opzionale - per rate limiting persistente)
+  KV_URL: z.string().url().optional(),
+  KV_REST_API_URL: z.string().url().optional(),
+  KV_REST_API_TOKEN: z.string().optional(),
+  
   // Environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 })

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logger, sanitizeError } from '@/lib/logger'
 
 // Forza rendering dinamico (usa headers per autenticazione)
 export const dynamic = 'force-dynamic'
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(packages)
   } catch (error) {
-    console.error('Errore recupero pacchetti:', error)
+    logger.error('Errore recupero pacchetti', { error: sanitizeError(error) })
     return NextResponse.json(
       { error: 'Errore nel recupero dei pacchetti' },
       { status: 500 }

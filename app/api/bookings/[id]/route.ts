@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { deleteCalendarEvent } from '@/lib/google-calendar'
+import { logger, sanitizeError } from '@/lib/logger'
 
 // Forza rendering dinamico (usa headers per autenticazione)
 export const dynamic = 'force-dynamic'
@@ -78,7 +79,10 @@ export async function DELETE(
       try {
         await deleteCalendarEvent(booking.googleEventId)
       } catch (error) {
-        console.error('⚠️ Errore cancellazione evento Google Calendar:', error)
+        logger.warn('Errore cancellazione evento Google Calendar', { 
+          bookingId: params.id,
+          error: sanitizeError(error) 
+        })
         // Continua comunque - meglio cancellare la prenotazione
       }
     }
@@ -128,11 +132,14 @@ export async function DELETE(
       }
     })
 
-    console.log('✅ Prenotazione cancellata con successo:', params.id)
+    logger.info('Prenotazione cancellata con successo', { bookingId: params.id })
     return NextResponse.json({ success: true })
     
   } catch (error) {
-    console.error('❌ Errore cancellazione prenotazione:', error)
+    logger.error('Errore cancellazione prenotazione', { 
+      bookingId: params.id,
+      error: sanitizeError(error) 
+    })
     return NextResponse.json(
       { 
         error: error instanceof Error ? error.message : 'Errore nella cancellazione della prenotazione' 

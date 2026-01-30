@@ -72,6 +72,86 @@ class Logger {
 }
 
 /**
+ * Sanitizes error objects to remove sensitive information
+ * 
+ * @param error - Error object or any value
+ * @returns Sanitized error object safe for logging
+ */
+export function sanitizeError(error: unknown): {
+  message: string
+  name?: string
+  stack?: string
+  code?: string | number
+  [key: string]: any
+} {
+  // Lista di campi sensibili da rimuovere
+  const sensitiveFields = [
+    'password',
+    'token',
+    'secret',
+    'accessToken',
+    'refreshToken',
+    'apiKey',
+    'authToken',
+    'authorization',
+    'credentials',
+    'cookie',
+    'session',
+  ]
+
+  // Se è un Error standard
+  if (error instanceof Error) {
+    const sanitized: any = {
+      message: error.message,
+      name: error.name,
+    }
+
+    // Aggiungi stack solo in development
+    if (process.env.NODE_ENV !== 'production') {
+      sanitized.stack = error.stack
+    }
+
+    // Aggiungi code se presente
+    if ('code' in error) {
+      sanitized.code = error.code
+    }
+
+    // Rimuovi campi sensibili da eventuali proprietà aggiuntive
+    Object.keys(error).forEach(key => {
+      if (!sensitiveFields.some(field => key.toLowerCase().includes(field.toLowerCase()))) {
+        const value = (error as any)[key]
+        // Non loggare oggetti complessi o funzioni
+        if (typeof value !== 'function' && typeof value !== 'object') {
+          sanitized[key] = value
+        }
+      }
+    })
+
+    return sanitized
+  }
+
+  // Se è un oggetto
+  if (typeof error === 'object' && error !== null) {
+    const sanitized: any = {}
+    Object.keys(error).forEach(key => {
+      if (!sensitiveFields.some(field => key.toLowerCase().includes(field.toLowerCase()))) {
+        const value = (error as any)[key]
+        // Non loggare oggetti complessi, funzioni o valori troppo lunghi
+        if (typeof value !== 'function' && typeof value !== 'object' && String(value).length < 500) {
+          sanitized[key] = value
+        }
+      }
+    })
+    return sanitized
+  }
+
+  // Se è una stringa o altro
+  return {
+    message: String(error),
+  }
+}
+
+/**
  * Logger instance
  * 
  * - Development: Colored console output with formatted metadata
@@ -79,10 +159,10 @@ class Logger {
  * 
  * @example
  * ```typescript
- * import { logger } from '@/lib/logger'
+ * import { logger, sanitizeError } from '@/lib/logger'
  * 
  * logger.info('User logged in', { userId: '123' })
- * logger.error('Payment failed', { error: err.message, orderId: '456' })
+ * logger.error('Payment failed', { error: sanitizeError(err), orderId: '456' })
  * logger.debug('Processing item', { item })
  * ```
  */

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { deleteCalendarEvent, updateCalendarEvent, createCalendarEvent } from '@/lib/google-calendar'
 import { sendWhatsAppMessage, formatBookingModificationMessage, formatBookingCancellationMessage } from '@/lib/whatsapp'
 import { isTwilioError } from '@/lib/errors'
+import { logger, sanitizeError } from '@/lib/logger'
 import { z } from 'zod'
 
 // Forza rendering dinamico (usa headers per autenticazione)
@@ -61,7 +62,10 @@ export async function DELETE(
       try {
         await deleteCalendarEvent(booking.googleEventId)
       } catch (error) {
-        console.error('⚠️ Errore cancellazione evento Google Calendar:', error)
+        logger.warn('Errore cancellazione evento Google Calendar', { 
+          bookingId: params.id,
+          error: sanitizeError(error) 
+        })
         // Continua comunque - meglio cancellare la prenotazione
       }
     }
@@ -159,26 +163,41 @@ export async function DELETE(
           )
 
           await sendWhatsAppMessage(user.phone, message)
-          console.log(`✅ WhatsApp disdetta inviato con successo a ${user.name} (${user.phone})`)
+          logger.info('WhatsApp disdetta inviato con successo', { userName: user.name, userId: user.id })
         } catch (error) {
           if (isTwilioError(error)) {
-            console.error(`⚠️ Errore Twilio invio WhatsApp a ${user.name} (${user.phone}):`, error.message)
+            logger.error('Errore Twilio invio WhatsApp disdetta', {
+              userName: user.name,
+              userId: user.id,
+              error: sanitizeError(error),
+              twilioCode: error.code,
+            })
           } else {
-            console.error(`⚠️ Errore generico invio WhatsApp a ${user.name} (${user.phone}):`, error instanceof Error ? error.message : String(error))
+            logger.error('Errore generico invio WhatsApp disdetta', {
+              userName: user.name,
+              userId: user.id,
+              error: sanitizeError(error),
+            })
           }
           // Continua con gli altri utenti
         }
       }
     } catch (error) {
-      console.error('⚠️ Errore invio notifiche WhatsApp disdetta:', error)
+      logger.error('Errore invio notifiche WhatsApp disdetta', { 
+        bookingId: params.id,
+        error: sanitizeError(error) 
+      })
       // Non bloccare la risposta - le notifiche non sono critiche
     }
 
-    console.log('✅ Prenotazione disdetta con successo:', params.id)
+    logger.info('Prenotazione disdetta con successo', { bookingId: params.id })
     return NextResponse.json({ success: true })
     
   } catch (error) {
-    console.error('Errore disdetta prenotazione:', error)
+    logger.error('Errore disdetta prenotazione', { 
+      bookingId: params.id,
+      error: sanitizeError(error) 
+    })
     return NextResponse.json(
       { error: 'Errore interno del server' },
       { status: 500 }
@@ -332,9 +351,12 @@ export async function PUT(
           newBookingDate,
           newEndDate
         )
-        console.log('✅ Evento Google Calendar aggiornato:', updatedBooking.googleEventId)
+        logger.info('Evento Google Calendar aggiornato', { eventId: updatedBooking.googleEventId })
       } catch (error) {
-        console.error('⚠️ Errore aggiornamento evento Google Calendar:', error)
+        logger.warn('Errore aggiornamento evento Google Calendar', { 
+          bookingId: params.id,
+          error: sanitizeError(error) 
+        })
         // Continua comunque - la prenotazione è stata aggiornata
       }
     } else {
@@ -352,10 +374,13 @@ export async function PUT(
             where: { id: params.id },
             data: { googleEventId: eventId },
           })
-          console.log('✅ Nuovo evento Google Calendar creato:', eventId)
+          logger.info('Nuovo evento Google Calendar creato', { eventId, bookingId: params.id })
         }
       } catch (error) {
-        console.error('⚠️ Errore creazione evento Google Calendar:', error)
+        logger.warn('Errore creazione evento Google Calendar', { 
+          bookingId: params.id,
+          error: sanitizeError(error) 
+        })
         // Continua comunque
       }
     }
@@ -410,26 +435,41 @@ export async function PUT(
           )
 
           await sendWhatsAppMessage(user.phone, message)
-          console.log(`✅ WhatsApp modifica inviato con successo a ${user.name} (${user.phone})`)
+          logger.info('WhatsApp modifica inviato con successo', { userName: user.name, userId: user.id })
         } catch (error) {
           if (isTwilioError(error)) {
-            console.error(`⚠️ Errore Twilio invio WhatsApp a ${user.name} (${user.phone}):`, error.message)
+            logger.error('Errore Twilio invio WhatsApp modifica', {
+              userName: user.name,
+              userId: user.id,
+              error: sanitizeError(error),
+              twilioCode: error.code,
+            })
           } else {
-            console.error(`⚠️ Errore generico invio WhatsApp a ${user.name} (${user.phone}):`, error instanceof Error ? error.message : String(error))
+            logger.error('Errore generico invio WhatsApp modifica', {
+              userName: user.name,
+              userId: user.id,
+              error: sanitizeError(error),
+            })
           }
           // Continua con gli altri utenti
         }
       }
     } catch (error) {
-      console.error('⚠️ Errore invio notifiche WhatsApp modifica:', error)
+      logger.error('Errore invio notifiche WhatsApp modifica', { 
+        bookingId: params.id,
+        error: sanitizeError(error) 
+      })
       // Non bloccare la risposta - le notifiche non sono critiche
     }
 
-    console.log('✅ Prenotazione modificata con successo:', params.id)
+    logger.info('Prenotazione modificata con successo', { bookingId: params.id })
     return NextResponse.json(updatedBooking)
     
   } catch (error) {
-    console.error('Errore modifica prenotazione:', error)
+    logger.error('Errore modifica prenotazione', { 
+      bookingId: params.id,
+      error: sanitizeError(error) 
+    })
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(

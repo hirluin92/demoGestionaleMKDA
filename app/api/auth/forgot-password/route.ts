@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendPasswordResetEmail } from '@/lib/email'
+import { logger, sanitizeError } from '@/lib/logger'
 import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
@@ -46,10 +47,15 @@ export async function POST(request: NextRequest) {
     const emailResult = await sendPasswordResetEmail(user.email, resetToken)
 
     if (!emailResult.success) {
-      console.error('Errore invio email:', emailResult.error)
+      logger.error('Errore invio email reset password', { 
+        email: user.email,
+        error: sanitizeError(emailResult.error) 
+      })
       // In sviluppo, logga il link
       if (process.env.NODE_ENV === 'development') {
-        console.log(`🔗 Link reset (dev): ${process.env.NEXTAUTH_URL}/reset-password/${resetToken}`)
+        logger.debug('Link reset password (dev)', { 
+          url: `${process.env.NEXTAUTH_URL}/reset-password/${resetToken}` 
+        })
       }
     }
 
@@ -58,7 +64,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     )
   } catch (error) {
-    console.error('Errore forgot-password:', error)
+    logger.error('Errore forgot-password', { error: sanitizeError(error) })
     return NextResponse.json(
       { error: 'Errore interno del server' },
       { status: 500 }

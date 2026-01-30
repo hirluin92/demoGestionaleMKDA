@@ -7,6 +7,7 @@ import { sendWhatsAppMessage, formatBookingConfirmationMessage } from '@/lib/wha
 import { bookingRateLimiter } from '@/lib/rate-limit'
 import { isTwilioError } from '@/lib/errors'
 import { handleApiError } from '@/lib/api-response'
+import { logger, sanitizeError } from '@/lib/logger'
 import { z } from 'zod'
 
 // Forza rendering dinamico (usa headers per autenticazione)
@@ -111,7 +112,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(bookings)
   } catch (error) {
-    console.error('Errore recupero prenotazioni:', error)
+    logger.error('Errore recupero prenotazioni', { error: sanitizeError(error) })
     return NextResponse.json(
       { error: 'Errore nel recupero delle prenotazioni' },
       { status: 500 }
@@ -225,9 +226,9 @@ export async function POST(request: NextRequest) {
         endDate
       )
       googleEventId = eventId
-      console.log('✅ Evento Google Calendar creato:', googleEventId)
+      logger.info('Evento Google Calendar creato', { eventId: googleEventId })
     } catch (error) {
-      console.error('⚠️ Errore creazione evento Google Calendar (continua senza):', error)
+      logger.warn('Errore creazione evento Google Calendar (continua senza)', { error: sanitizeError(error) })
       // Continua senza Google Calendar - la prenotazione viene comunque creata
       // L'utente può sincronizzare manualmente dopo
     }
@@ -381,24 +382,30 @@ export async function POST(request: NextRequest) {
           user.phone,
           formatBookingConfirmationMessage(user.name, bookingDate, time)
         )
-        console.log(`✅ WhatsApp inviato con successo a ${user.name} (${user.phone})`)
+        logger.info('WhatsApp inviato con successo', { userName: user.name, userId: user.id })
       } catch (error) {
         if (isTwilioError(error)) {
-          console.error(`⚠️ Errore Twilio invio WhatsApp a ${user.name} (${user.phone}):`, error.message)
+          logger.error('Errore Twilio invio WhatsApp', {
+            userName: user.name,
+            userId: user.id,
+            error: sanitizeError(error),
+            twilioCode: error.code,
+          })
           if (error.code === 21608) {
-            console.error(`   🔴 NUMERO NON AUTORIZZATO su Twilio Sandbox!`)
-            console.error(`   Soluzione: Aggiungi ${user.phone} alla lista numeri autorizzati su Twilio Console`)
+            logger.warn('Numero non autorizzato su Twilio Sandbox', { userId: user.id })
           } else if (error.code === 21211) {
-            console.error(`   🔴 NUMERO NON VALIDO per Twilio!`)
+            logger.warn('Numero non valido per Twilio', { userId: user.id })
           }
-        } else if (error instanceof Error) {
-          console.error(`⚠️ Errore generico invio WhatsApp a ${user.name} (${user.phone}):`, error.message)
         } else {
-          console.error(`⚠️ Errore sconosciuto invio WhatsApp a ${user.name} (${user.phone}):`, String(error))
+          logger.error('Errore generico invio WhatsApp', {
+            userName: user.name,
+            userId: user.id,
+            error: sanitizeError(error),
+          })
         }
       }
     } else {
-      console.warn(`⚠️ Utente ${user?.name || session.user.id} non ha un numero di telefono configurato`)
+      logger.warn('Utente senza numero di telefono configurato', { userId: user?.id || session.user.id })
     }
 
     return NextResponse.json(booking, { status: 201 })

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logger, sanitizeError } from '@/lib/logger'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 
@@ -93,6 +94,11 @@ export async function GET(request: NextRequest) {
                 id: true,
                 name: true,
                 totalSessions: true,
+                _count: {
+                  select: {
+                    userPackages: true,
+                  },
+                },
               },
             },
           },
@@ -110,9 +116,62 @@ export async function GET(request: NextRequest) {
       orderBy,
     })
 
-    return NextResponse.json(users)
+    // Per ogni utente, calcola il conteggio corretto delle prenotazioni includendo quelle dei pacchetti multipli
+    const usersWithCorrectBookingCount = await Promise.all(
+      users.map(async (user) => {
+        // Identifica pacchetti singoli e multipli
+        const singlePackageIds = new Set<string>()
+        const multiplePackageIds = new Set<string>()
+        
+        for (const userPackage of user.userPackages) {
+          const allUserPackages = await prisma.userPackage.findMany({
+            where: {
+              packageId: userPackage.package.id,
+            },
+            select: {
+              userId: true,
+            },
+          })
+          
+          if (allUserPackages.length > 1) {
+            multiplePackageIds.add(userPackage.package.id)
+          } else {
+            singlePackageIds.add(userPackage.package.id)
+          }
+        }
+
+        // Conta le prenotazioni:
+        // 1. Prenotazioni create dall'utente per pacchetti singoli
+        // 2. Tutte le prenotazioni dei pacchetti multipli condivisi (indipendentemente da chi le ha create)
+        const singlePackageBookings = singlePackageIds.size > 0 ? await prisma.booking.count({
+          where: {
+            status: 'CONFIRMED',
+            userId: user.id,
+            packageId: { in: Array.from(singlePackageIds) },
+          },
+        }) : 0
+
+        const multiplePackageBookings = multiplePackageIds.size > 0 ? await prisma.booking.count({
+          where: {
+            status: 'CONFIRMED',
+            packageId: { in: Array.from(multiplePackageIds) },
+          },
+        }) : 0
+
+        const bookingCount = singlePackageBookings + multiplePackageBookings
+
+        return {
+          ...user,
+          _count: {
+            bookings: bookingCount,
+          },
+        }
+      })
+    )
+
+    return NextResponse.json(usersWithCorrectBookingCount)
   } catch (error) {
-    console.error('Errore recupero utenti:', error)
+    logger.error('Errore recupero utenti', { error: sanitizeError(error) })
     return NextResponse.json(
       { error: 'Errore nel recupero degli utenti' },
       { status: 500 }
@@ -169,7 +228,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.error('Errore creazione utente:', error)
+    logger.error('Errore creazione utente', { error: sanitizeError(error) })
     return NextResponse.json(
       { error: 'Errore nella creazione dell\'utente' },
       { status: 500 }

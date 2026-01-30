@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { logger, sanitizeError } from '@/lib/logger'
 import bcrypt from 'bcryptjs'
 
 export const dynamic = 'force-dynamic'
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     )
   } catch (error) {
-    console.error('Errore reset-password:', error)
+    logger.error('Errore reset-password', { error: sanitizeError(error) })
     return NextResponse.json(
       { error: 'Errore interno del server' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logger, sanitizeError } from '@/lib/logger'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 
@@ -80,7 +81,7 @@ export async function GET(
 
     return NextResponse.json(userWithoutPassword)
   } catch (error) {
-    console.error('Errore recupero utente:', error)
+    logger.error('Errore recupero utente', { userId: params.id, error: sanitizeError(error) })
     return NextResponse.json(
       { error: 'Errore interno del server' },
       { status: 500 }
@@ -175,7 +176,7 @@ export async function PUT(
       )
     }
 
-    console.error('Errore aggiornamento utente:', error)
+    logger.error('Errore aggiornamento utente', { userId: params.id, error: sanitizeError(error) })
     return NextResponse.json(
       { error: 'Errore interno del server' },
       { status: 500 }
@@ -222,7 +223,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Errore eliminazione utente:', error)
+    logger.error('Errore eliminazione utente', { userId: params.id, error: sanitizeError(error) })
     return NextResponse.json(
       { error: 'Errore interno del server' },
       { status: 500 }

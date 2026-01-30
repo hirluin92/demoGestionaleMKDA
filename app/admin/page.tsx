@@ -13,6 +13,7 @@ import AdminPackagesList from '@/components/AdminPackagesList'
 import AdminCalendar from '@/components/AdminCalendar'
 import CreateUserModal from '@/components/CreateUserModal'
 import CreatePackageModal from '@/components/CreatePackageModal'
+import AdminBookingModal from '@/components/AdminBookingModal'
 import ProfileModal from '@/components/ProfileModal'
 import SettingsModal from '@/components/SettingsModal'
 // import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -27,6 +28,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'users' | 'packages' | 'calendar'>('users')
   const [showCreateUser, setShowCreateUser] = useState(false)
   const [showCreatePackage, setShowCreatePackage] = useState(false)
+  const [showAdminBooking, setShowAdminBooking] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
@@ -327,12 +329,23 @@ export default function AdminPage() {
             {activeTab === 'calendar' && (
               <div role="tabpanel" id="calendar-panel" aria-labelledby="calendar-tab">
                 <CardHeader>
-                  <div>
-                    <CardTitle className="flex items-center text-lg md:text-2xl heading-font gold-text-gradient">
-                      <Calendar className="w-5 h-5 md:w-6 md:h-6 mr-2 md:mr-3 text-[#E8DCA0]" />
-                      Calendario Appuntamenti
-                    </CardTitle>
-                    <CardDescription className="text-xs md:text-sm">Visualizza gli appuntamenti per mese o giorno</CardDescription>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <CardTitle className="flex items-center text-lg md:text-2xl heading-font gold-text-gradient">
+                        <Calendar className="w-5 h-5 md:w-6 md:h-6 mr-2 md:mr-3 text-[#E8DCA0]" />
+                        Calendario Appuntamenti
+                      </CardTitle>
+                      <CardDescription className="text-xs md:text-sm">Visualizza gli appuntamenti per mese o giorno</CardDescription>
+                    </div>
+                    <Button
+                      variant="gold"
+                      size="md"
+                      onClick={() => setShowAdminBooking(true)}
+                      className="w-full sm:w-auto"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Prenota Lezione
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="max-w-[900px] mx-auto">
@@ -359,6 +372,17 @@ export default function AdminPage() {
             onClose={() => setShowCreatePackage(false)}
             onSuccess={() => {
               setShowCreatePackage(false)
+              window.location.reload()
+            }}
+          />
+        )}
+
+        {showAdminBooking && (
+          <AdminBookingModal
+            isOpen={showAdminBooking}
+            onClose={() => setShowAdminBooking(false)}
+            onSuccess={() => {
+              setShowAdminBooking(false)
               window.location.reload()
             }}
           />

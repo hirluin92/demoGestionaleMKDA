@@ -640,6 +640,19 @@ export default function AdminUsersList() {
                         <span className="hidden xl:inline">Misurazioni</span>
                         <span className="xl:hidden">Mis.</span>
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          handleDeleteUserClick(user.id, user.name)
+                        }}
+                        disabled={deletingUser === user.id}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-400/10 whitespace-nowrap"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1.5 flex-shrink-0" />
+                        <span className="hidden xl:inline">Elimina</span>
+                        <span className="xl:hidden">Elim.</span>
+                      </Button>
                     </div>
                   </td>
                 </tr>

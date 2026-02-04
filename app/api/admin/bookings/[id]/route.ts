@@ -192,6 +192,11 @@ export async function DELETE(
 
     // STEP 5: Notifica tutti i clienti con appuntamenti successivi nello stesso giorno
     try {
+      // Crea bookingDate per formattazione
+      const bookingDate = new Date(booking.date)
+      const [hours, minutes] = booking.time.split(':').map(Number)
+      bookingDate.setHours(hours, minutes, 0, 0)
+
       // Calcola l'orario della prenotazione disdetta in minuti per il confronto
       const [cancelledHours, cancelledMinutes] = booking.time.split(':').map(Number)
       const cancelledTimeInMinutes = cancelledHours * 60 + cancelledMinutes
@@ -247,13 +252,6 @@ export async function DELETE(
         }
 
         try {
-          const formattedDate = bookingDate.toLocaleDateString('it-IT', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })
-
           const message = formatFreeSlotNotificationMessage(
             laterBooking.user.name,
             bookingDate,

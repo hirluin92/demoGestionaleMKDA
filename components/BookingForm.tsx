@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Calendar as CalendarIcon, Clock, Sparkles, CheckCircle2 } from 'lucide-react'
+import { format, addDays } from 'date-fns'
+import { it } from 'date-fns/locale'
+import { Calendar as CalendarIcon, Clock, Sparkles, CheckCircle2, ChevronDown } from 'lucide-react'
 import Button from '@/components/ui/Button'
 
 interface Package {
@@ -28,6 +30,15 @@ export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
   const [success, setSuccess] = useState(false)
 
   const today = new Date().toISOString().split('T')[0]
+  
+  // Genera array di date disponibili (prossimi 60 giorni)
+  const availableDates = Array.from({ length: 60 }, (_, i) => {
+    const date = addDays(new Date(), i)
+    return {
+      value: date.toISOString().split('T')[0],
+      label: format(date, 'd MMM yyyy', { locale: it })
+    }
+  })
 
   // Seleziona automaticamente il primo pacchetto con sessioni disponibili
   const activePackage = packages.find(pkg => {
@@ -193,16 +204,24 @@ export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
           <CalendarIcon className="w-4 h-4 mr-2 text-gold-400" aria-hidden="true" />
           Seleziona Data
         </label>
-        <input
-          id="date-select"
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          min={today}
-          required
-          aria-required="true"
-          className="w-full px-4 py-3 md:py-3.5 bg-dark-100/50 backdrop-blur-sm border-2 border-dark-200/30 rounded-xl text-white text-sm md:text-base focus-visible:border-gold-400 focus-visible:ring-2 focus-visible:ring-gold-400/20 transition-all cursor-pointer hover:border-dark-300/50"
-        />
+        <div className="relative">
+          <select
+            id="date-select"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            required
+            aria-required="true"
+            className="w-full px-4 py-3 md:py-3.5 bg-dark-100/50 backdrop-blur-sm border-2 border-dark-200/30 rounded-xl text-white text-sm md:text-base focus-visible:border-gold-400 focus-visible:ring-2 focus-visible:ring-gold-400/20 transition-all cursor-pointer hover:border-dark-300/50 appearance-none pr-10"
+          >
+            <option value="">Seleziona una data</option>
+            {availableDates.map((date) => (
+              <option key={date.value} value={date.value}>
+                {date.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-dark-500 pointer-events-none" />
+        </div>
       </div>
 
       {/* Time Selection */}

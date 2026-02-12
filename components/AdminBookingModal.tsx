@@ -200,7 +200,7 @@ export default function AdminBookingModal({ isOpen, onClose, onSuccess }: AdminB
       <div
         className="modal-content glass-card rounded-xl p-6 md:p-8"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '600px', width: '90vw' }}
+        style={{ maxWidth: '900px', width: '95vw' }}
       >
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold gold-text-gradient heading-font">

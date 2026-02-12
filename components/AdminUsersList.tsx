@@ -35,7 +35,11 @@ interface UserData {
 type SortBy = 'name' | 'collaborationStartDate'
 type SortOrder = 'asc' | 'desc'
 
-export default function AdminUsersList() {
+interface AdminUsersListProps {
+  archiveMode?: boolean
+}
+
+export default function AdminUsersList({ archiveMode = false }: AdminUsersListProps) {
   const [users, setUsers] = useState<UserData[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; email: string } | null>(null)
@@ -44,8 +48,6 @@ export default function AdminUsersList() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [sortBy, setSortBy] = useState<SortBy>('name')
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
-  const [selectedPackageId, setSelectedPackageId] = useState<string>('')
-  const [packages, setPackages] = useState<Array<{ id: string; name: string; totalSessions: number }>>([])
   const [totalUsersCount, setTotalUsersCount] = useState<number>(0)
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
   const [userBookings, setUserBookings] = useState<Record<string, any[]>>({})
@@ -59,8 +61,7 @@ export default function AdminUsersList() {
 
   useEffect(() => {
     fetchUsers()
-    fetchPackages()
-  }, [sortBy, sortOrder, selectedPackageId])
+  }, [sortBy, sortOrder, archiveMode])
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -76,8 +77,8 @@ export default function AdminUsersList() {
       const url = new URL('/api/admin/users', window.location.origin)
       url.searchParams.set('sortBy', sortBy)
       url.searchParams.set('sortOrder', sortOrder)
-      if (selectedPackageId) {
-        url.searchParams.set('packageId', selectedPackageId)
+      if (archiveMode) {
+        url.searchParams.set('archive', 'true')
       }
       
       const response = await fetch(url.toString())
@@ -94,22 +95,6 @@ export default function AdminUsersList() {
     }
   }
 
-  const fetchPackages = async () => {
-    try {
-      const response = await fetch('/api/admin/packages')
-      if (response.ok) {
-        const data = await response.json()
-        // Estrai i pacchetti unici (potrebbero esserci duplicati se un pacchetto è assegnato a più utenti)
-        const packageMap = new Map<string, { id: string; name: string; totalSessions: number }>(
-          data.map((pkg: any) => [pkg.id, { id: pkg.id, name: pkg.name, totalSessions: pkg.totalSessions }])
-        )
-        const uniquePackages = Array.from(packageMap.values())
-        setPackages(uniquePackages)
-      }
-    } catch (error) {
-      console.error('Errore recupero pacchetti:', error)
-    }
-  }
 
   const handleSort = (field: SortBy) => {
     if (sortBy === field) {
@@ -260,28 +245,6 @@ export default function AdminUsersList() {
 
       {/* Filtri e Ordinamento - dimensioni ridotte */}
       <div className="flex flex-col gap-2 md:gap-3">
-        {/* Filtro per Pacchetto */}
-        <div className="flex flex-col sm:flex-row gap-1.5 md:gap-2 items-start sm:items-center">
-          <Label className="text-xs md:text-sm whitespace-nowrap">
-            Filtra per pacchetto
-          </Label>
-          <div className="relative flex-1 max-w-xs">
-            <select
-              value={selectedPackageId}
-              onChange={(e) => setSelectedPackageId(e.target.value)}
-              className="input-field w-full appearance-none pr-7 text-xs md:text-sm py-1 md:py-1.5 h-auto"
-            >
-              <option value="">Tutti i clienti</option>
-              {packages.map((pkg) => (
-                <option key={pkg.id} value={pkg.id}>
-                  {pkg.name} ({pkg.totalSessions} sessioni)
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 md:w-3.5 md:h-3.5 text-dark-500 pointer-events-none" aria-hidden="true" />
-          </div>
-        </div>
-
         {/* Ordinamento */}
         <div className="flex flex-col sm:flex-row gap-1.5 md:gap-2 items-start sm:items-center justify-between">
           <div className="flex items-center gap-1 md:gap-1.5 flex-nowrap">

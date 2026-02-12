@@ -38,7 +38,7 @@
 
 /* Base Styles */
 @layer base {
-  body {
+body {
     box-sizing: border-box;
     background: #0a0a0a;
     position: relative;
@@ -84,7 +84,6 @@
   position: absolute;
   width: 100%;
   height: 100%;
-  transition: transform 0.1s ease-out;
 }
 
 .parallax-layer-1 {
@@ -235,16 +234,12 @@
   animation: shimmer 3s ease-in-out infinite;
 }
 
-/* Glass Card - Versione avanzata con gradient border e top shine */
+/* Glass Card - Versione solida senza effetti glass */
 .glass-card {
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(var(--color-gold-main-rgb), 0.1);
+  background: rgba(20, 20, 20, 0.95);
+  border: 1px solid rgba(var(--color-gold-main-rgb), 0.2);
   box-shadow: 
-    0 8px 32px 0 rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.03),
-    0 0 30px 0 rgba(var(--color-gold-main-rgb), 0.03);
+    0 8px 32px 0 rgba(0, 0, 0, 0.5);
   position: relative;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -262,12 +257,9 @@
 }
 
 .glass-card:hover:not(.rounded-none) {
-  transform: translateY(-2px) scale(1.01);
-  border-color: rgba(var(--color-gold-main-rgb), 0.25);
+  border-color: rgba(var(--color-gold-main-rgb), 0.3);
   box-shadow: 
-    0 12px 40px 0 rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
-    0 0 40px 0 rgba(var(--color-gold-main-rgb), 0.15);
+    0 12px 40px 0 rgba(0, 0, 0, 0.6);
 }
 
 /* Versione avanzata con gradient border (opzionale, da usare con classe .glass-card-advanced) */
@@ -310,35 +302,6 @@
   background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 70%);
 }
 
-.glass-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    rgba(var(--color-gold-main-rgb), 0.4) 50%, 
-    transparent 100%);
-}
-
-.glass-card::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(var(--color-gold-main-rgb), 0.12) 0%, transparent 50%);
-  opacity: 0;
-  transition: opacity 0.6s ease, transform 0.3s ease;
-  pointer-events: none;
-}
-
-.glass-card:hover::after {
-  opacity: 1;
-}
 
 /* Status Badges */
 .status-badge {
@@ -438,15 +401,13 @@
 /* Input Field */
 .input-field {
   width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
+  background: rgba(40, 40, 40, 0.95);
   border: 1px solid rgba(var(--color-gold-main-rgb), 0.2);
   color: #fff;
   padding: 12px 16px;
   border-radius: 12px;
   transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   box-shadow: 
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
     0 2px 10px rgba(0, 0, 0, 0.2);
   font-family: var(--font-primary);
 }
@@ -454,13 +415,11 @@
 .input-field:focus {
   outline: none;
   border-color: var(--color-gold-main);
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(50, 50, 50, 0.95);
   box-shadow: 
     0 0 0 4px rgba(var(--color-gold-main-rgb), 0.2),
     0 0 20px rgba(var(--color-gold-main-rgb), 0.3),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
     0 8px 25px rgba(var(--color-gold-main-rgb), 0.25);
-  transform: translateY(-2px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

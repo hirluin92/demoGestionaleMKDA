@@ -108,6 +108,8 @@ model BodyMeasurement {
   userId          String
   measurementDate DateTime @default(now())
   peso            Float?
+  altezza         Float?  // Altezza
+  massaGrassa     Float?  // % Massa Grassa
   braccio         Float?  // Circonferenza braccio
   spalle          Float?  // Circonferenza spalle
   torace          Float?

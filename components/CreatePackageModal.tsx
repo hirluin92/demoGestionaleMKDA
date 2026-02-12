@@ -19,7 +19,7 @@ interface CreatePackageModalProps {
 export default function CreatePackageModal({ onClose, onSuccess }: CreatePackageModalProps) {
   const [users, setUsers] = useState<User[]>([])
   const [usersWithActivePackages, setUsersWithActivePackages] = useState<Set<string>>(new Set())
-  const [packageType, setPackageType] = useState<'singolo' | 'multiplo' | null>(null)
+  const [packageType, setPackageType] = useState<'1to1' | '1to2' | null>(null)
   const [numberOfAthletes, setNumberOfAthletes] = useState<number>(2)
   const [selectedSingleUserId, setSelectedSingleUserId] = useState<string>('')
   const [selectedMultipleUserIds, setSelectedMultipleUserIds] = useState<Record<number, string>>({})
@@ -70,20 +70,8 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
         const data = await response.json()
         setUsers(data)
         
-        // Identifica gli utenti con pacchetti attivi
-        const activePackageUserIds = new Set<string>()
-        data.forEach((user: any) => {
-          if (user.userPackages && user.userPackages.length > 0) {
-            // Controlla se ha almeno un pacchetto attivo
-            const hasActivePackage = user.userPackages.some((up: any) => 
-              up.package && up.package.isActive !== false
-            )
-            if (hasActivePackage) {
-              activePackageUserIds.add(user.id)
-            }
-          }
-        })
-        setUsersWithActivePackages(activePackageUserIds)
+        // Non filtrare più gli utenti con pacchetti attivi - permettere più pacchetti per persona
+        setUsersWithActivePackages(new Set())
       }
     } catch (error) {
       console.error('Errore recupero utenti:', error)
@@ -121,7 +109,7 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
     // Raccogli gli user IDs in base al tipo
     let userIdsToSubmit: string[] = []
     
-    if (packageType === 'singolo') {
+    if (packageType === '1to1') {
       if (!selectedSingleUserId) {
         setError('Seleziona un cliente')
         setLoading(false)
@@ -129,7 +117,7 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
       }
       userIdsToSubmit = [selectedSingleUserId]
     } else {
-      // Multiplo: verifica che tutti gli atleti siano selezionati
+      // 1to2: verifica che tutti gli atleti siano selezionati
       const selectedIds = Object.values(selectedMultipleUserIds).filter(id => id !== '')
       if (selectedIds.length !== numberOfAthletes) {
         setError(`Seleziona tutti i ${numberOfAthletes} atleti`)
@@ -195,7 +183,7 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
     }))
   }
 
-  // Funzione per ottenere i clienti disponibili per una tendina specifica (senza pacchetti attivi)
+  // Funzione per ottenere i clienti disponibili per una tendina specifica
   const getAvailableUsersForSelect = (excludeIndex?: number, searchTerm?: string): User[] => {
     let availableUsers = users
     
@@ -208,11 +196,10 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
       )
     }
     
-    // Escludi sempre quelli con pacchetto attivo
-    availableUsers = availableUsers.filter(user => !usersWithActivePackages.has(user.id))
+    // Non escludere più quelli con pacchetto attivo - permettere più pacchetti per persona
     
-    if (packageType === 'multiplo') {
-      // Per multiplo: escludi anche i clienti già selezionati nelle altre tendine
+    if (packageType === '1to2') {
+      // Per 1to2: escludi solo i clienti già selezionati nelle altre tendine
       const selectedIds = Object.entries(selectedMultipleUserIds)
         .filter(([index]) => excludeIndex === undefined || index !== excludeIndex.toString())
         .map(([, id]) => id)
@@ -224,18 +211,9 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
     return availableUsers
   }
 
-  // Funzione per ottenere i clienti con pacchetto attivo che corrispondono alla ricerca
+  // Funzione non più necessaria - rimossa perché permette più pacchetti per persona
   const getUsersWithActivePackagesForSearch = (searchTerm: string): User[] => {
-    if (!searchTerm || searchTerm.trim() === '') {
-      return []
-    }
-    
-    const searchLower = searchTerm.toLowerCase()
-    return users.filter(user => 
-      usersWithActivePackages.has(user.id) &&
-      (user.name.toLowerCase().includes(searchLower) || 
-       user.email.toLowerCase().includes(searchLower))
-    )
+    return []
   }
 
   const handleSingleUserSelect = (userId: string) => {
@@ -265,7 +243,7 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
     }))
   }
 
-  const handlePackageTypeChange = (type: 'singolo' | 'multiplo') => {
+  const handlePackageTypeChange = (type: '1to1' | '1to2') => {
     setPackageType(type)
     setSelectedSingleUserId('')
     setSelectedMultipleUserIds({})
@@ -331,8 +309,8 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
               <select
                 value={packageType || ''}
                 onChange={(e) => {
-                  const value = e.target.value as 'singolo' | 'multiplo' | ''
-                  if (value === 'singolo' || value === 'multiplo') {
+                  const value = e.target.value as '1to1' | '1to2' | ''
+                  if (value === '1to1' || value === '1to2') {
                     handlePackageTypeChange(value)
                   }
                 }}
@@ -340,15 +318,15 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
                 required
               >
                 <option value="">Seleziona tipo pacchetto</option>
-                <option value="singolo">Singolo</option>
-                <option value="multiplo">Multiplo</option>
+                <option value="1to1">1 to 1</option>
+                <option value="1to2">1 to 2</option>
               </select>
               <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 pointer-events-none" aria-hidden="true" />
             </div>
           </div>
 
-          {/* Se singolo: ricerca cliente */}
-          {packageType === 'singolo' && (
+          {/* Se 1to1: ricerca cliente */}
+          {packageType === '1to1' && (
             <div>
               <label
                 className="block text-sm font-light mb-2 heading-font text-gold-400"
@@ -411,18 +389,6 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
                               <div className="text-xs text-dark-500">{user.email}</div>
                             </button>
                           ))}
-                          {usersWithActive.map((user) => (
-                            <button
-                              key={user.id}
-                              type="button"
-                              disabled
-                              className="w-full text-left px-4 py-2 text-dark-500 text-sm cursor-not-allowed opacity-60"
-                            >
-                              <div className="font-semibold">{user.name}</div>
-                              <div className="text-xs">{user.email}</div>
-                              <div className="text-xs text-red-400 mt-1">Pacchetto attivo</div>
-                            </button>
-                          ))}
                         </>
                       )
                     })()}
@@ -432,8 +398,8 @@ export default function CreatePackageModal({ onClose, onSuccess }: CreatePackage
             </div>
           )}
 
-          {/* Se multiplo: tendina numero atleti + tante tendine quanti sono gli atleti */}
-          {packageType === 'multiplo' && (
+          {/* Se 1to2: tendina numero atleti + tante tendine quanti sono gli atleti */}
+          {packageType === '1to2' && (
             <>
               <div>
                 <label

@@ -82,40 +82,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verifica che nessun utente abbia già un pacchetto attivo
-    const usersWithActivePackages = await withRetry(() =>
-      prisma.userPackage.findMany({
-        where: {
-          userId: { in: userIds },
-          package: {
-            isActive: true,
-          },
-        },
-        include: {
-          user: {
-            select: {
-              name: true,
-              email: true,
-            },
-          },
-        },
-      })
-    )
-
-    if (usersWithActivePackages.length > 0) {
-      const usersWithPackages = usersWithActivePackages.map(up => up.user.name || up.user.email).join(', ')
-      return NextResponse.json(
-        { 
-          error: `Uno o più clienti hanno già un pacchetto attivo: ${usersWithPackages}. Non è possibile assegnare un nuovo pacchetto finché non viene terminato quello esistente.`,
-          usersWithPackages: usersWithActivePackages.map(up => ({
-            userId: up.userId,
-            userName: up.user.name,
-            userEmail: up.user.email,
-          })),
-        },
-        { status: 400 }
-      )
-    }
+    // Permetti di aggiungere più pacchetti alla stessa persona - rimosso controllo
 
     // Genera nome automatico basato sul tipo (singolo o multiplo)
     const packageName = name || (userIds.length > 1 ? 'Multiplo' : 'Singolo')

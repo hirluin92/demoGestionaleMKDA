@@ -10,6 +10,8 @@ interface BodyMeasurement {
   userId: string
   measurementDate: string
   peso?: number | null
+  altezza?: number | null  // Altezza
+  massaGrassa?: number | null  // % Massa Grassa
   braccio?: number | null  // Circonferenza braccio
   spalle?: number | null  // Circonferenza spalle
   torace?: number | null
@@ -47,6 +49,8 @@ export default function BodyMeasurementModal({
 
   const [formData, setFormData] = useState<Partial<BodyMeasurement>>({
     peso: undefined,
+    altezza: undefined,
+    massaGrassa: undefined,
     braccio: undefined,
     spalle: undefined,
     torace: undefined,
@@ -69,6 +73,8 @@ export default function BodyMeasurementModal({
       const latest = measurements[0]
       setFormData({
         peso: latest.peso ?? undefined,
+        altezza: latest.altezza ?? undefined,
+        massaGrassa: latest.massaGrassa ?? undefined,
         braccio: latest.braccio ?? undefined,
         spalle: latest.spalle ?? undefined,
         torace: latest.torace ?? undefined,
@@ -177,6 +183,9 @@ export default function BodyMeasurementModal({
   }
 
   const handleMuscleClick = (muscleId: string) => {
+    // Salva la posizione di scroll corrente per evitare che cambi
+    const scrollPosition = window.scrollY || document.documentElement.scrollTop
+    
     // Se c'è già un grafico aperto per questa parte, chiudilo, altrimenti aprilo
     if (selectedGraph === muscleId) {
       setSelectedGraph(null)
@@ -184,18 +193,10 @@ export default function BodyMeasurementModal({
       setSelectedGraph(muscleId)
     }
     
-    const inputField = document.getElementById(muscleId)
-    if (inputField) {
-      inputField.focus()
-      inputField.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      // Visual feedback
-      inputField.style.transform = 'scale(1.05)'
-      inputField.style.boxShadow = '0 0 0 4px rgba(211, 175, 55, 0.3), 0 8px 25px rgba(211, 175, 55, 0.3)'
-      setTimeout(() => {
-        inputField.style.transform = ''
-        inputField.style.boxShadow = ''
-      }, 600)
-    }
+    // Ripristina la posizione di scroll dopo un breve delay per evitare scroll automatico
+    setTimeout(() => {
+      window.scrollTo(0, scrollPosition)
+    }, 0)
   }
 
   // Funzione per generare dati del grafico per una misura specifica
@@ -466,8 +467,10 @@ export default function BodyMeasurementModal({
                 <div className="flex justify-between items-center mb-3">
                   <h4 className="text-sm font-bold gold-text-gradient">
                     {selectedGraph === 'peso' && 'Peso'}
+                    {selectedGraph === 'altezza' && 'Altezza'}
+                    {selectedGraph === 'massaGrassa' && '% Massa Grassa'}
                     {selectedGraph === 'braccio' && 'Braccio'}
-                    {selectedGraph === 'spalle' && 'Circonferenza Spalle'}
+                    {selectedGraph === 'spalle' && 'Spalle'}
                     {selectedGraph === 'torace' && 'Torace'}
                     {selectedGraph === 'vita' && 'Vita'}
                     {selectedGraph === 'gamba' && 'Gamba'}
@@ -731,6 +734,44 @@ export default function BodyMeasurementModal({
 
               <div>
                 <label
+                  htmlFor="altezza"
+                  className="block text-sm font-light mb-2 heading-font"
+                  style={{ letterSpacing: '0.5px', color: '#D3AF37' }}
+                >
+                  Altezza (cm)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  id="altezza"
+                  className="input-field w-full"
+                  placeholder="175"
+                  value={formData.altezza ?? ''}
+                  onChange={(e) => handleInputChange('altezza', e.target.value ? parseFloat(e.target.value) : null)}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="massaGrassa"
+                  className="block text-sm font-light mb-2 heading-font"
+                  style={{ letterSpacing: '0.5px', color: '#D3AF37' }}
+                >
+                  % Massa Grassa
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  id="massaGrassa"
+                  className="input-field w-full"
+                  placeholder="15.5"
+                  value={formData.massaGrassa ?? ''}
+                  onChange={(e) => handleInputChange('massaGrassa', e.target.value ? parseFloat(e.target.value) : null)}
+                />
+              </div>
+
+              <div>
+                <label
                   htmlFor="braccio"
                   className="block text-sm font-light mb-2 heading-font"
                   style={{ letterSpacing: '0.5px', color: '#D3AF37' }}
@@ -754,7 +795,7 @@ export default function BodyMeasurementModal({
                   className="block text-sm font-light mb-2 heading-font"
                   style={{ letterSpacing: '0.5px', color: '#D3AF37' }}
                 >
-                  Circonferenza Spalle (cm)
+                  Spalle (cm)
                 </label>
                 <input
                   type="number"
@@ -883,13 +924,15 @@ export default function BodyMeasurementModal({
                           {m.measurementDate ? formatDate(m.measurementDate) : 'N/A'}
                         </span>
                         <span className="text-xs text-gray-400">
-                          {m.peso || '-'}kg
+                          {m.peso != null ? `${m.peso} kg` : '-'}
                         </span>
                       </div>
                       <div className="grid grid-cols-3 gap-2 text-xs text-gray-400">
-                        <div>Torace: {m.torace || '-'}cm</div>
-                        <div>Vita: {m.vita || '-'}cm</div>
-                        <div>Fianchi: {m.fianchi || '-'}cm</div>
+                        <div>Altezza: {m.altezza != null ? `${m.altezza} cm` : '-'}</div>
+                        <div>% Massa Grassa: {m.massaGrassa != null ? `${m.massaGrassa} %` : '-'}</div>
+                        <div>Torace: {m.torace != null ? `${m.torace} cm` : '-'}</div>
+                        <div>Vita: {m.vita != null ? `${m.vita} cm` : '-'}</div>
+                        <div>Fianchi: {m.fianchi != null ? `${m.fianchi} cm` : '-'}</div>
                       </div>
                       <div className="text-xs text-[#D3AF37] mt-2 text-center">
                         👆 Clicca per dettagli completi
@@ -937,31 +980,57 @@ export default function BodyMeasurementModal({
               <div className="grid grid-cols-2 gap-4">
                 <div className="glass-card rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Peso</p>
-                  <p className="text-lg font-semibold">{selectedMeasurement.peso || '-'} kg</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement.peso != null ? `${selectedMeasurement.peso} kg` : '-'}
+                  </p>
+                </div>
+                <div className="glass-card rounded-lg p-4">
+                  <p className="text-sm text-gray-400 mb-1">Altezza</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement.altezza != null ? `${selectedMeasurement.altezza} cm` : '-'}
+                  </p>
+                </div>
+                <div className="glass-card rounded-lg p-4">
+                  <p className="text-sm text-gray-400 mb-1">% Massa Grassa</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement.massaGrassa != null ? `${selectedMeasurement.massaGrassa} %` : '-'}
+                  </p>
                 </div>
                 <div className="glass-card rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Braccio</p>
-                  <p className="text-lg font-semibold">{selectedMeasurement.braccio || '-'} cm</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement.braccio != null ? `${selectedMeasurement.braccio} cm` : '-'}
+                  </p>
                 </div>
                 <div className="glass-card rounded-lg p-4">
-                  <p className="text-sm text-gray-400 mb-1">Circonferenza Spalle</p>
-                  <p className="text-lg font-semibold">{selectedMeasurement.spalle || '-'} cm</p>
+                  <p className="text-sm text-gray-400 mb-1">Spalle</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement.spalle != null ? `${selectedMeasurement.spalle} cm` : '-'}
+                  </p>
                 </div>
                 <div className="glass-card rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Torace</p>
-                  <p className="text-lg font-semibold">{selectedMeasurement.torace || '-'} cm</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement.torace != null ? `${selectedMeasurement.torace} cm` : '-'}
+                  </p>
                 </div>
                 <div className="glass-card rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Vita</p>
-                  <p className="text-lg font-semibold">{selectedMeasurement.vita || '-'} cm</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement.vita != null ? `${selectedMeasurement.vita} cm` : '-'}
+                  </p>
                 </div>
                 <div className="glass-card rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Gamba</p>
-                  <p className="text-lg font-semibold">{selectedMeasurement.gamba || '-'} cm</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement.gamba != null ? `${selectedMeasurement.gamba} cm` : '-'}
+                  </p>
                 </div>
                 <div className="glass-card rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Fianchi</p>
-                  <p className="text-lg font-semibold">{selectedMeasurement.fianchi || '-'} cm</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement.fianchi != null ? `${selectedMeasurement.fianchi} cm` : '-'}
+                  </p>
                 </div>
               </div>
 

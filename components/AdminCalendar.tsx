@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { format, addDays, subDays, startOfMonth, endOfMonth, getDay, parseISO, addMonths, subMonths, startOfDay } from 'date-fns'
+import { format, addDays, subDays, startOfMonth, endOfMonth, getDay, parseISO, addMonths, subMonths, startOfDay, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
 import Button from '@/components/ui/Button'
@@ -33,7 +33,7 @@ interface Booking {
   }
 }
 
-type CalendarView = 'month' | 'day'
+type CalendarView = 'month' | 'day' | 'week'
 
 interface AppointmentData {
   id: string
@@ -56,6 +56,7 @@ export default function AdminCalendar() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [calendarView, setCalendarView] = useState<CalendarView>('day')
+  const [currentWeek, setCurrentWeek] = useState(new Date())
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [currentDay, setCurrentDay] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
@@ -118,7 +119,7 @@ export default function AdminCalendar() {
 
   useEffect(() => {
     fetchBookings()
-  }, [calendarView, currentMonth, currentDay])
+  }, [calendarView, currentMonth, currentDay, currentWeek])
 
   const fetchBookings = async () => {
     setLoading(true)
@@ -129,6 +130,9 @@ export default function AdminCalendar() {
       if (calendarView === 'day') {
         startDate = startOfDay(currentDay)
         endDate = addDays(startDate, 1)
+      } else if (calendarView === 'week') {
+        startDate = startOfWeek(currentWeek, { weekStartsOn: 1 })
+        endDate = endOfWeek(currentWeek, { weekStartsOn: 1 })
       } else {
         // Month view - fetch tutto il mese
         startDate = startOfMonth(currentMonth)
@@ -161,6 +165,8 @@ export default function AdminCalendar() {
   const navigatePeriod = (direction: 'prev' | 'next') => {
     if (calendarView === 'month') {
       setCurrentMonth(direction === 'prev' ? subMonths(currentMonth, 1) : addMonths(currentMonth, 1))
+    } else if (calendarView === 'week') {
+      setCurrentWeek(direction === 'prev' ? subWeeks(currentWeek, 1) : addWeeks(currentWeek, 1))
     } else {
       setCurrentDay(direction === 'prev' ? subDays(currentDay, 1) : addDays(currentDay, 1))
     }
@@ -170,6 +176,7 @@ export default function AdminCalendar() {
     const today = new Date()
     setCurrentMonth(new Date(today))
     setCurrentDay(new Date(today))
+    setCurrentWeek(new Date(today))
   }
 
   // VISTA MESE
@@ -280,8 +287,8 @@ export default function AdminCalendar() {
     for (let h = 6; h < 14; h++) {
       hours.push({ hour: h, minute: 0 })
     }
-    // Dalle 15:30 in poi: ogni ora a partire da 15:30
-    for (let h = 15; h < 22; h++) {
+    // Dalle 15:30 in poi: ogni ora a partire da 15:30 fino a 22:30
+    for (let h = 15; h < 23; h++) {
       hours.push({ hour: h, minute: 30 })
     }
 
@@ -308,7 +315,7 @@ export default function AdminCalendar() {
           <h3 className="text-lg font-bold gold-text-gradient heading-font mb-1">
             {dayAppointments.length} Appuntament{dayAppointments.length !== 1 ? 'i' : 'o'}
           </h3>
-            <p className="text-xs text-gray-400">Orario: 06:00 - 13:00, 15:30 - 21:30</p>
+            <p className="text-xs text-gray-400">Orario: 06:00 - 13:00, 15:30 - 22:30</p>
         </div>
 
         {/* UNICO SCROLL CONTAINER - ore + timeline insieme */}
@@ -335,6 +342,83 @@ export default function AdminCalendar() {
               <div
                 className="relative time-slot"
                 style={{ height: timelineHeight }}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  e.dataTransfer.dropEffect = 'move'
+                }}
+                onDrop={async (e) => {
+                  e.preventDefault()
+                  const appointmentId = e.dataTransfer.getData('appointmentId')
+                  const currentTime = e.dataTransfer.getData('currentTime')
+                  
+                  if (!appointmentId) return
+                  
+                  // Calcola la nuova posizione basata su dove è stato rilasciato
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  const y = e.clientY - rect.top
+                  const newMinutes = Math.round((y / PX_PER_MIN) + dayStartMin)
+                  
+                  // Converti minuti in HH:MM
+                  const newHour = Math.floor(newMinutes / 60)
+                  const newMinute = newMinutes % 60
+                  
+                  // Valida l'orario (06:00-22:30)
+                  if (newHour < 6 || (newHour === 22 && newMinute > 30) || newHour >= 23) {
+                    alert('Orario non valido. Gli slot sono disponibili dalle 06:00 alle 22:30.')
+                    return
+                  }
+                  
+                  // Evita la pausa pranzo (14:00-15:30)
+                  if ((newHour === 14) || (newHour === 15 && newMinute < 30)) {
+                    alert('Orario non valido. Slot non disponibili durante la pausa pranzo (14:00-15:30).')
+                    return
+                  }
+                  
+                  // Arrotonda all'orario più vicino disponibile
+                  let finalHour = newHour
+                  let finalMinute = newMinute
+                  
+                  if (finalHour < 14) {
+                    // Dalle 6 alle 13: solo :00
+                    finalMinute = 0
+                  } else if (finalHour >= 15) {
+                    // Dalle 15:30 in poi: solo :30
+                    finalMinute = 30
+                    if (finalHour === 15 && finalMinute === 30) {
+                      // OK
+                    } else if (finalMinute < 30) {
+                      finalMinute = 30
+                    } else if (finalMinute > 30) {
+                      finalHour += 1
+                      finalMinute = 30
+                    }
+                  }
+                  
+                  const newTime = `${String(finalHour).padStart(2, '0')}:${String(finalMinute).padStart(2, '0')}`
+                  
+                  if (newTime === currentTime) return
+                  
+                  // Aggiorna l'appuntamento
+                  try {
+                    const response = await fetch(`/api/admin/bookings/${appointmentId}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        date: dateStr,
+                        time: newTime,
+                      }),
+                    })
+                    
+                    if (response.ok) {
+                      fetchBookings()
+                    } else {
+                      const data = await response.json()
+                      alert(data.error || 'Errore nello spostamento dell\'appuntamento')
+                    }
+                  } catch (error) {
+                    alert('Errore nello spostamento dell\'appuntamento')
+                  }
+                }}
               >
                   {/* Linee orarie */}
                   {hours.slice(0, -1).map((h, idx) => {
@@ -426,10 +510,16 @@ export default function AdminCalendar() {
                       return (
                         <div
                           key={apt.id}
-                          className={`appointment-block cursor-pointer absolute z-10 overflow-hidden
+                          draggable={!apt.isPast}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('appointmentId', apt.id)
+                            e.dataTransfer.setData('currentTime', apt.time)
+                            e.dataTransfer.effectAllowed = 'move'
+                          }}
+                          className={`appointment-block absolute z-10 overflow-hidden
                             bg-[#0b0b0b]/90 border border-gold-400/25 shadow-card backdrop-blur-sm
                             rounded-xl
-                            ${apt.isPast ? 'grayscale brightness-75' : ''}`}
+                            ${apt.isPast ? 'grayscale brightness-75 cursor-not-allowed' : 'cursor-move hover:border-gold-400/50'}`}
                           style={{ 
                             top, 
                             height,
@@ -475,9 +565,277 @@ export default function AdminCalendar() {
   const getCurrentPeriod = () => {
     if (calendarView === 'month') {
       return format(currentMonth, 'MMMM yyyy', { locale: it })
+    } else if (calendarView === 'week') {
+      const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 })
+      const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 })
+      return `${format(weekStart, 'd MMM', { locale: it })} - ${format(weekEnd, 'd MMM yyyy', { locale: it })}`
     } else {
       return format(currentDay, 'EEEE d MMMM yyyy', { locale: it })
     }
+  }
+
+  // VISTA SETTIMANALE
+  const renderWeekView = () => {
+    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 })
+    const weekDays = eachDayOfInterval({ start: weekStart, end: endOfWeek(currentWeek, { weekStartsOn: 1 }) })
+    const dayNames = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
+
+    // Genera le ore disponibili: 6-13 ogni ora, poi 15:30, 16:30, 17:30, ecc.
+    const hours: Array<{ hour: number; minute: number }> = []
+    // Dalle 6 alle 13: ogni ora
+    for (let h = 6; h < 14; h++) {
+      hours.push({ hour: h, minute: 0 })
+    }
+    // Dalle 15:30 in poi: ogni ora a partire da 15:30 fino a 22:30
+    for (let h = 15; h < 23; h++) {
+      hours.push({ hour: h, minute: 30 })
+    }
+
+    const HOUR_HEIGHT = isMobile ? 40 : 60
+    const PX_PER_MIN = HOUR_HEIGHT / 60
+    const dayStartMin = 6 * 60 // Inizia alle 6:00
+    const dayEndMin = 22 * 60 + 30 // Termina alle 22:30
+    const totalMinutes = dayEndMin - dayStartMin
+    const timelineHeight = totalMinutes * PX_PER_MIN
+
+    const minutesSinceMidnight = (hhmm: string) => {
+      const [h, m] = hhmm.split(':').map(Number)
+      return h * 60 + m
+    }
+
+    return (
+      <div className="space-y-4">
+        {/* Header giorni */}
+        <div className="grid grid-cols-8 gap-2">
+          <div className="col-span-1"></div> {/* Spazio per le etichette orarie */}
+          {dayNames.map((dayName, index) => {
+            const day = weekDays[index]
+            const dateStr = format(day, 'yyyy-MM-dd')
+            const dayAppointments = allAppointments.filter(a => a.date === dateStr)
+            const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+
+            return (
+              <div key={dateStr} className="text-center">
+                <div className={`text-xs font-semibold mb-1 ${isToday ? 'text-gold-400' : 'text-gray-400'}`}>
+                  {dayName}
+                </div>
+                <div className={`text-sm font-bold mb-1 ${isToday ? 'text-gold-400' : 'text-white'}`}>
+                  {format(day, 'd')}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {dayAppointments.length} appuntament{dayAppointments.length !== 1 ? 'i' : 'o'}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Timeline settimanale con orari */}
+        <div
+          className="calendar-scroll overflow-y-auto rounded-lg no-scrollbar"
+          style={{ height: '70vh' }}
+        >
+          <div className="grid grid-cols-8 gap-2">
+            {/* Colonna etichette ore */}
+            <div className="col-span-1">
+              {hours.slice(0, -1).map((h, idx) => (
+                <div
+                  key={`${h.hour}-${h.minute}`}
+                  className="time-label flex items-start text-[10px] md:text-xs"
+                  style={{ height: HOUR_HEIGHT }}
+                >
+                  {String(h.hour).padStart(2, '0')}:{String(h.minute).padStart(2, '0')}
+                </div>
+              ))}
+            </div>
+
+            {/* Colonne giorni con timeline */}
+            {weekDays.map((day) => {
+              const dateStr = format(day, 'yyyy-MM-dd')
+              const dayAppointments = allAppointments.filter(a => a.date === dateStr)
+
+              return (
+                <div key={dateStr} className="col-span-1">
+                  <div
+                    className="relative time-slot border border-dark-200/20 rounded-lg"
+                    style={{ height: timelineHeight }}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      e.dataTransfer.dropEffect = 'move'
+                    }}
+                    onDrop={async (e) => {
+                      e.preventDefault()
+                      const appointmentId = e.dataTransfer.getData('appointmentId')
+                      const currentTime = e.dataTransfer.getData('currentTime')
+                      
+                      if (!appointmentId) return
+                      
+                      // Calcola la nuova posizione basata su dove è stato rilasciato
+                      const rect = e.currentTarget.getBoundingClientRect()
+                      const y = e.clientY - rect.top
+                      const newMinutes = Math.round((y / PX_PER_MIN) + dayStartMin)
+                      
+                      // Converti minuti in HH:MM
+                      const newHour = Math.floor(newMinutes / 60)
+                      const newMinute = newMinutes % 60
+                      
+                      // Valida l'orario (06:00-22:30)
+                      if (newHour < 6 || (newHour === 22 && newMinute > 30) || newHour >= 23) {
+                        alert('Orario non valido. Gli slot sono disponibili dalle 06:00 alle 22:30.')
+                        return
+                      }
+                      
+                      // Evita la pausa pranzo (14:00-15:30)
+                      if ((newHour === 14) || (newHour === 15 && newMinute < 30)) {
+                        alert('Orario non valido. Slot non disponibili durante la pausa pranzo (14:00-15:30).')
+                        return
+                      }
+                      
+                      // Arrotonda all'orario più vicino disponibile
+                      let finalHour = newHour
+                      let finalMinute = newMinute
+                      
+                      if (finalHour < 14) {
+                        // Dalle 6 alle 13: solo :00
+                        finalMinute = 0
+                      } else if (finalHour >= 15) {
+                        // Dalle 15:30 in poi: solo :30
+                        finalMinute = 30
+                        if (finalHour === 15 && finalMinute === 30) {
+                          // OK
+                        } else if (finalMinute < 30) {
+                          finalMinute = 30
+                        } else if (finalMinute > 30) {
+                          finalHour += 1
+                          finalMinute = 30
+                        }
+                      }
+                      
+                      const newTime = `${String(finalHour).padStart(2, '0')}:${String(finalMinute).padStart(2, '0')}`
+                      
+                      if (newTime === currentTime) return
+                      
+                      // Aggiorna l'appuntamento
+                      try {
+                        const response = await fetch(`/api/admin/bookings/${appointmentId}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            date: dateStr,
+                            time: newTime,
+                          }),
+                        })
+                        
+                        if (response.ok) {
+                          fetchBookings()
+                        } else {
+                          const data = await response.json()
+                          alert(data.error || 'Errore nello spostamento dell\'appuntamento')
+                        }
+                      } catch (error) {
+                        alert('Errore nello spostamento dell\'appuntamento')
+                      }
+                    }}
+                  >
+                    {/* Linee orarie */}
+                    {hours.slice(0, -1).map((h, idx) => {
+                      const hourMinutes = h.hour * 60 + h.minute
+                      const top = (hourMinutes - dayStartMin) * PX_PER_MIN
+                      return (
+                        <div
+                          key={`${h.hour}-${h.minute}`}
+                          className="absolute left-0 right-0 border-t border-white/10 z-0"
+                          style={{ top }}
+                        />
+                      )
+                    })}
+
+                    {/* Appuntamenti */}
+                    {dayAppointments.map((apt) => {
+                      const startMin = minutesSinceMidnight(apt.time)
+                      const duration = apt.durationMinutes || 60
+                      const endMin = startMin + duration
+
+                      // Clamp dentro range visibile
+                      const lunchBreakStart = 14 * 60 // 14:00
+                      const lunchBreakEnd = 15 * 60 + 30 // 15:30
+                      if (startMin >= lunchBreakStart && startMin < lunchBreakEnd) {
+                        return null // Non mostrare appuntamenti nella pausa pranzo
+                      }
+
+                      const top = (startMin - dayStartMin) * PX_PER_MIN
+                      const height = duration * PX_PER_MIN
+
+                      // Controlla se ci sono più appuntamenti alla stessa ora
+                      const sameTimeAppointments = dayAppointments.filter(
+                        a => minutesSinceMidnight(a.time) === startMin && !a.isMultiplePackage
+                      )
+                      const hasTwoSingles = sameTimeAppointments.length === 2 && !apt.isMultiplePackage
+
+                      let left = '0.5rem'
+                      let right = '0.5rem'
+                      let width = 'auto'
+
+                      if (hasTwoSingles) {
+                        const index = sameTimeAppointments.findIndex(a => a.id === apt.id)
+                        const halfWidth = `calc(50% - 0.625rem)`
+                        if (index === 0) {
+                          left = '0.5rem'
+                          right = 'auto'
+                          width = halfWidth
+                        } else {
+                          left = 'auto'
+                          right = '0.5rem'
+                          width = halfWidth
+                        }
+                      }
+
+                      return (
+                        <div
+                          key={apt.id}
+                          draggable={!apt.isPast}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('appointmentId', apt.id)
+                            e.dataTransfer.setData('currentTime', apt.time)
+                            e.dataTransfer.effectAllowed = 'move'
+                          }}
+                          className={`appointment-block absolute z-10 overflow-hidden
+                            bg-[#0b0b0b]/90 border border-gold-400/25 shadow-card backdrop-blur-sm
+                            rounded-xl
+                            ${apt.isPast ? 'grayscale brightness-75 cursor-not-allowed' : 'cursor-move hover:border-gold-400/50'}`}
+                          style={{ 
+                            top, 
+                            height,
+                            left,
+                            right,
+                            width
+                          }}
+                          onClick={() => showAppointmentDetail(apt)}
+                        >
+                          <div className="h-full p-1.5 md:p-2 flex flex-col justify-center leading-tight">
+                            <div>
+                              <div className="font-semibold text-[10px] md:text-xs lg:text-sm text-white truncate">
+                                {apt.client_name}
+                                {apt.isMultiplePackage && (
+                                  <Badge variant="info" size="sm" className="ml-1 md:ml-2 text-[8px] md:text-[10px]">(Multiplo)</Badge>
+                                )}
+                              </div>
+                              <div className="text-[9px] md:text-[11px] text-gray-400 truncate">
+                                {apt.time} • {apt.service}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -527,6 +885,13 @@ export default function AdminCalendar() {
             Mese
           </button>
           <button
+            className={`calendar-view-btn text-xs md:text-sm px-3 md:px-4 ${calendarView === 'week' ? 'active' : ''}`}
+            onClick={() => setCalendarView('week')}
+            data-view="week"
+          >
+            Settimana
+          </button>
+          <button
             className={`calendar-view-btn text-xs md:text-sm px-3 md:px-4 ${calendarView === 'day' ? 'active' : ''}`}
             onClick={() => setCalendarView('day')}
             data-view="day"
@@ -546,6 +911,7 @@ export default function AdminCalendar() {
         ) : (
           <>
             {calendarView === 'month' && renderMonthView()}
+            {calendarView === 'week' && renderWeekView()}
             {calendarView === 'day' && renderDayView()}
           </>
         )}

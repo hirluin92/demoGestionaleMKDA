@@ -266,8 +266,8 @@ export async function getAvailableSlots(
     allSlots.push(`${hour.toString().padStart(2, '0')}:00`)
   }
   
-  // Dalle 15:30 in poi: ogni ora a partire da 15:30 (15:30, 16:30, 17:30, ecc.)
-  for (let hour = 15; hour < 22; hour++) {
+  // Dalle 15:30 in poi: ogni ora a partire da 15:30 fino a 22:30 (15:30, 16:30, 17:30, ..., 22:30)
+  for (let hour = 15; hour < 23; hour++) {
     allSlots.push(`${hour.toString().padStart(2, '0')}:30`)
   }
 

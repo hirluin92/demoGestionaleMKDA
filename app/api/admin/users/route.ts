@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'name' // 'name' | 'collaborationStartDate'
     const sortOrder = searchParams.get('sortOrder') || 'asc' // 'asc' | 'desc'
     const packageId = searchParams.get('packageId') // Filtro per pacchetto
+    const archive = searchParams.get('archive') === 'true' // Filtro per archivio
 
     // Valida sortOrder - deve essere 'asc' o 'desc'
     const validSortOrder = (sortOrder === 'desc' ? 'desc' : 'asc') as 'asc' | 'desc'
@@ -75,6 +76,17 @@ export async function GET(request: NextRequest) {
       where.userPackages = {
         some: {
           packageId: packageId,
+        },
+      }
+    }
+
+    // Se è modalità archivio, mostra solo utenti senza pacchetti attivi
+    if (archive) {
+      where.userPackages = {
+        none: {
+          package: {
+            isActive: true,
+          },
         },
       }
     }
@@ -206,6 +218,7 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
 
+    const now = new Date()
     const user = await prisma.user.create({
       data: {
         email,
@@ -213,6 +226,7 @@ export async function POST(request: NextRequest) {
         name,
         phone,
         role: 'CLIENT',
+        collaborationStartDate: now, // Imposta la data di inizio collaborazione alla data di creazione
       },
     })
 

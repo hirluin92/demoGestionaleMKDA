@@ -42,11 +42,11 @@ export default function HugemassLogo({
     )
   }
 
-  // Per 'full' e 'icon' usiamo l'immagine SVG
+  // Per 'full' e 'icon' usiamo l'immagine PNG HQ
   return (
     <div className={`flex items-center justify-center ${className}`}>
       <Image
-        src="/logo-hugemass.svg"
+        src="/new_hugemass_logo.PNG"
         alt="HUGE MASS PERSONAL TRAINING"
         width={dimensions.width}
         height={dimensions.height}

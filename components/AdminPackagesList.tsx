@@ -61,7 +61,7 @@ type SortOrder = 'asc' | 'desc'
 export default function AdminPackagesList() {
   const [packages, setPackages] = useState<PackageData[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedPackageType, setSelectedPackageType] = useState<PackageType | 'all' | 'multipli'>('all')
+  const [selectedPackageType, setSelectedPackageType] = useState<PackageType | 'all' | '1to1' | '1to2'>('all')
   const [sortBy, setSortBy] = useState<SortBy>('userName')
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
   const [packageToDelete, setPackageToDelete] = useState<{ id: string; name: string } | null>(null)
@@ -94,8 +94,11 @@ export default function AdminPackagesList() {
     
     if (selectedPackageType === 'all') {
       filtered = packages
-    } else if (selectedPackageType === 'multipli') {
-      // Filtra solo i pacchetti assegnati a più di un utente
+    } else if (selectedPackageType === '1to1') {
+      // Filtra solo i pacchetti singoli (assegnati a un solo utente)
+      filtered = packages.filter(pkg => pkg.userPackages.length === 1)
+    } else if (selectedPackageType === '1to2') {
+      // Filtra solo i pacchetti multipli (assegnati a più di un utente)
       filtered = packages.filter(pkg => pkg.userPackages.length > 1)
     } else {
       filtered = packages.filter(pkg => pkg.totalSessions === selectedPackageType)
@@ -259,24 +262,21 @@ export default function AdminPackagesList() {
             >
               Tutti
             </Button>
-            {PACKAGE_TYPES.map(type => (
-              <Button
-                key={type}
-                variant={selectedPackageType === type ? 'gold' : 'outline-gold'}
-                size="sm"
-                onClick={() => setSelectedPackageType(type)}
-                className="text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 md:py-1 h-auto whitespace-nowrap"
-              >
-                {type} lezioni
-              </Button>
-            ))}
             <Button
-              variant={selectedPackageType === 'multipli' ? 'gold' : 'outline-gold'}
+              variant={selectedPackageType === '1to1' ? 'gold' : 'outline-gold'}
               size="sm"
-              onClick={() => setSelectedPackageType('multipli')}
+              onClick={() => setSelectedPackageType('1to1')}
               className="text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 md:py-1 h-auto whitespace-nowrap"
             >
-              Multipli
+              1 to 1
+            </Button>
+            <Button
+              variant={selectedPackageType === '1to2' ? 'gold' : 'outline-gold'}
+              size="sm"
+              onClick={() => setSelectedPackageType('1to2')}
+              className="text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 md:py-1 h-auto whitespace-nowrap"
+            >
+              1 to 2
             </Button>
           </div>
         </div>
@@ -312,11 +312,13 @@ export default function AdminPackagesList() {
         <div className="text-center py-12">
           <Package className="w-12 h-12 text-dark-500 mx-auto mb-4" />
           <p className="text-dark-600 font-semibold">
-            {selectedPackageType === 'multipli' 
-              ? 'Nessun utente con pacchetti multipli'
-              : selectedPackageType !== 'all' 
-                ? `Nessun utente con pacchetti da ${selectedPackageType} lezioni`
-                : 'Nessun utente con pacchetti'}
+            {selectedPackageType === '1to1' 
+              ? 'Nessun utente con pacchetti 1 to 1'
+              : selectedPackageType === '1to2'
+                ? 'Nessun utente con pacchetti 1 to 2'
+                : selectedPackageType !== 'all' 
+                  ? `Nessun utente con pacchetti da ${selectedPackageType} lezioni`
+                  : 'Nessun utente con pacchetti'}
           </p>
         </div>
       ) : (

@@ -91,10 +91,14 @@ export async function GET(request: NextRequest) {
         })
         
         const allSlots: string[] = []
-        for (let hour = 8; hour < 20; hour++) {
-          for (let minute = 0; minute < 60; minute += 30) {
-            allSlots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`)
-          }
+        // Genera slot dalle 06:00 alle 22:30
+        // Dalle 06:00 alle 13:00: ogni ora
+        for (let hour = 6; hour < 14; hour++) {
+          allSlots.push(`${hour.toString().padStart(2, '0')}:00`)
+        }
+        // Dalle 15:30 in poi: ogni ora a partire da 15:30 fino a 22:30
+        for (let hour = 15; hour < 23; hour++) {
+          allSlots.push(`${hour.toString().padStart(2, '0')}:30`)
         }
         
         // Filtra slot considerando sovrapposizioni (durata standard 60 minuti)

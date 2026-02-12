@@ -55,6 +55,7 @@ export default function DashboardPage() {
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 })
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [showBookingModal, setShowBookingModal] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [mounted, setMounted] = useState(false)
@@ -122,6 +123,7 @@ export default function DashboardPage() {
   const handleBookingSuccess = () => {
     fetchPackages()
     setRefreshKey(prev => prev + 1)
+    setShowBookingModal(false) // Chiudi il modal dopo il successo
   }
 
   if (status === 'loading' || loading) {
@@ -287,8 +289,62 @@ export default function DashboardPage() {
           {/* Tab Content */}
           {activeTab === 'dashboard' && (
             <>
+          {/* Pulsante Prenotazione - PRIMA COSA VISIBILE */}
+          <div className="mb-6 md:mb-8">
+            {totalRemainingSessions > 0 ? (
+              <Card as="section" aria-labelledby="booking-title">
+                <CardHeader>
+                  <CardTitle id="booking-title" className="flex items-center text-lg md:text-2xl">
+                    <Calendar className="w-5 h-5 md:w-6 md:h-6 mr-2 md:mr-3 text-[#D3AF37]" />
+                    Prenota la tua Sessione
+                  </CardTitle>
+                  <CardDescription className="text-xs md:text-sm">Clicca per aprire il calendario e prenotare la tua sessione</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    variant="gold"
+                    size="lg"
+                    fullWidth
+                    onClick={() => setShowBookingModal(true)}
+                    className="text-base md:text-lg py-4 md:py-5"
+                  >
+                    <Calendar className="w-5 h-5 md:w-6 md:h-6 mr-2" />
+                    Prenota la tua Sessione
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : packages.length > 0 ? (
+              <Card variant="gold-border" className="text-center">
+                <CardContent className="py-12 md:py-16">
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-gold-400 to-gold-500 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-gold">
+                    <Package className="w-8 h-8 md:w-10 md:h-10 text-dark-950" />
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-display font-bold text-white mb-2 md:mb-3">
+                    Sessioni Esaurite
+                  </h3>
+                  <p className="text-sm md:text-base text-dark-600 px-4">
+                    Contatta l'amministratore per acquistare un nuovo pacchetto premium
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card variant="gold-border" className="text-center">
+                <CardContent className="py-12 md:py-16">
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-gold-400 to-gold-500 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-gold">
+                    <Package className="w-8 h-8 md:w-10 md:h-10 text-dark-950" />
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-display font-bold text-white mb-2 md:mb-3">
+                    Nessun Pacchetto Assegnato
+                  </h3>
+                  <p className="text-sm md:text-base text-dark-600 px-4">
+                    Contatta l'amministratore per ricevere un pacchetto premium
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
-          {/* Lista Prenotazioni - Spostata in alto */}
+          {/* Lista Prenotazioni */}
           <div className="mb-6 md:mb-8">
             <Card variant="darker" as="section" aria-labelledby="bookings-title">
               <CardHeader>
@@ -375,52 +431,6 @@ export default function DashboardPage() {
               </Card>
             </div>
           )}
-
-          {/* Form Prenotazione */}
-          <div>
-            {totalRemainingSessions > 0 ? (
-              <Card as="section" aria-labelledby="booking-title">
-                <CardHeader>
-                  <CardTitle id="booking-title" className="flex items-center text-lg md:text-2xl">
-                    <Calendar className="w-5 h-5 md:w-6 md:h-6 mr-2 md:mr-3 text-[#D3AF37]" />
-                    Prenota una Sessione
-                  </CardTitle>
-                  <CardDescription className="text-xs md:text-sm">Scegli data e orario per la tua prossima sessione</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <BookingForm onSuccess={handleBookingSuccess} packages={activePackages} />
-                </CardContent>
-              </Card>
-            ) : packages.length > 0 ? (
-              <Card variant="gold-border" className="text-center">
-                <CardContent className="py-12 md:py-16">
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-gold-400 to-gold-500 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-gold">
-                    <Package className="w-8 h-8 md:w-10 md:h-10 text-dark-950" />
-                  </div>
-                  <h3 className="text-xl md:text-2xl font-display font-bold text-white mb-2 md:mb-3">
-                    Sessioni Esaurite
-                  </h3>
-                  <p className="text-sm md:text-base text-dark-600 px-4">
-                    Contatta l'amministratore per acquistare un nuovo pacchetto premium
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card variant="gold-border" className="text-center">
-                <CardContent className="py-12 md:py-16">
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-gold-400 to-gold-500 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-gold">
-                    <Package className="w-8 h-8 md:w-10 md:h-10 text-dark-950" />
-                  </div>
-                  <h3 className="text-xl md:text-2xl font-display font-bold text-white mb-2 md:mb-3">
-                    Nessun Pacchetto Assegnato
-                  </h3>
-                  <p className="text-sm md:text-base text-dark-600 px-4">
-                    Contatta l'amministratore per ricevere un pacchetto premium
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
             </>
           )}
 
@@ -437,7 +447,25 @@ export default function DashboardPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ClientMeasurementsView />
+                  <ErrorBoundary
+                    fallback={
+                      <div className="text-center py-8">
+                        <Ruler className="w-12 h-12 mx-auto mb-4 text-[#D3AF37]" />
+                        <h3 className="text-lg font-semibold mb-2">Errore nel caricamento delle misurazioni</h3>
+                        <p className="text-sm text-gray-400 mb-4">
+                          Si è verificato un problema. Prova a ricaricare la pagina.
+                        </p>
+                        <button
+                          onClick={() => window.location.reload()}
+                          className="px-4 py-2 bg-[#D3AF37] text-dark-950 rounded-lg font-semibold hover:bg-[#E8DCA0] transition-colors"
+                        >
+                          Ricarica Pagina
+                        </button>
+                      </div>
+                    }
+                  >
+                    <ClientMeasurementsView />
+                  </ErrorBoundary>
                 </CardContent>
               </Card>
             </div>
@@ -506,6 +534,35 @@ export default function DashboardPage() {
           isOpen={showSettingsModal}
           onClose={() => setShowSettingsModal(false)}
         />}
+
+        {/* Booking Modal */}
+        {mounted && showBookingModal && createPortal(
+          <div 
+            className="modal-overlay" 
+            onClick={() => setShowBookingModal(false)}
+          >
+            <div 
+              className="modal-content glass-card rounded-xl p-6 md:p-8" 
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: '600px', width: '90vw' }}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl md:text-2xl font-bold gold-text-gradient heading-font">
+                  Prenota la tua Sessione
+                </h2>
+                <button
+                  onClick={() => setShowBookingModal(false)}
+                  className="text-gray-400 hover:text-white transition"
+                  aria-label="Chiudi"
+                >
+                  <X className="w-6 h-6 md:w-8 md:h-8" />
+                </button>
+              </div>
+              <BookingForm onSuccess={handleBookingSuccess} packages={activePackages} />
+            </div>
+          </div>,
+          document.body
+        )}
       </div>
     </ErrorBoundary>
   )

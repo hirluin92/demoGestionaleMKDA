@@ -25,9 +25,11 @@ const bookingSchema = z.object({
   time: z.string()
     .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Formato orario non valido')
     .refine((time) => {
-      const [hours] = time.split(':').map(Number)
-      return hours >= 8 && hours < 20
-    }, 'Orario non valido (8:00-20:00)'),
+      const [hours, minutes] = time.split(':').map(Number)
+      const totalMinutes = hours * 60 + minutes
+      // Orario valido: dalle 06:00 alle 22:30
+      return totalMinutes >= 360 && totalMinutes <= 1350
+    }, 'Orario non valido (06:00-22:30)'),
     
   packageId: z.string().min(1, 'Package ID richiesto'),
 }).refine((data) => {

@@ -7,7 +7,7 @@ import { useScrollAnimation } from '@/hooks/useScrollAnimation'
 import { useEffect, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { signOut } from 'next-auth/react'
-import { Users, Package, LogOut, Plus, Menu, X, Settings, Calendar, User, ChevronDown } from 'lucide-react'
+import { Users, Package, LogOut, Plus, Menu, X, Settings, Calendar, User, ChevronDown, Archive } from 'lucide-react'
 import HugemassLogo from '@/components/HugemassLogo'
 import AdminUsersList from '@/components/AdminUsersList'
 import AdminPackagesList from '@/components/AdminPackagesList'
@@ -28,7 +28,7 @@ export default function AdminPage() {
   const router = useRouter()
   useSessionSecurity() // Aggiunge controlli di sicurezza sulla sessione
   useScrollAnimation() // Attiva animazioni scroll
-  const [activeTab, setActiveTab] = useState<'users' | 'packages' | 'calendar'>('users')
+  const [activeTab, setActiveTab] = useState<'users' | 'packages' | 'calendar' | 'archive'>('users')
   const [showCreateUser, setShowCreateUser] = useState(false)
   const [showCreatePackage, setShowCreatePackage] = useState(false)
   const [showAdminBooking, setShowAdminBooking] = useState(false)
@@ -117,9 +117,6 @@ export default function AdminPage() {
                 </div>
                 <div className="sm:hidden">
                   <HugemassLogo variant="icon" size="sm" />
-                </div>
-                <div>
-                  <p className="text-xs text-dark-600 tracking-widest uppercase font-sans">CONTROL PANEL</p>
                 </div>
               </div>
               
@@ -219,12 +216,9 @@ export default function AdminPage() {
         <main className="max-w-[98%] xl:max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-6 relative z-10">
           {/* Hero Section - dimensioni ridotte */}
           <div className="mb-4 md:mb-6 animate-fade-in">
-            <h2 className="text-lg sm:text-xl md:text-2xl heading-font font-bold gold-text-gradient mb-1 md:mb-2">
-              Pannello di Controllo
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl heading-font font-bold gold-text-gradient mb-1 md:mb-2">
+              {activeTab === 'users' ? 'Gestione Clienti' : activeTab === 'packages' ? 'Gestione Pacchetti' : activeTab === 'calendar' ? 'Calendario' : 'Archivio'}
             </h2>
-            <p className="text-dark-600 text-xs md:text-sm heading-font">
-              Gestisci clienti e pacchetti
-            </p>
           </div>
 
           {/* Tabs - dimensioni ridotte */}
@@ -356,6 +350,25 @@ export default function AdminPage() {
                 </CardContent>
               </div>
             )}
+
+            {activeTab === 'archive' && (
+              <div role="tabpanel" id="archive-panel" aria-labelledby="archive-tab">
+                <CardHeader className="p-4 md:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 md:gap-3">
+                    <div>
+                      <CardTitle className="flex items-center text-sm md:text-lg heading-font gold-text-gradient">
+                        <Archive className="w-4 h-4 md:w-5 md:h-5 mr-1.5 md:mr-2 text-[#E8DCA0]" />
+                        Archivio Clienti
+                      </CardTitle>
+                      <CardDescription className="text-[10px] md:text-xs">Clienti senza pacchetti attivi o non più attivi</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <AdminUsersList archiveMode={true} />
+                </CardContent>
+              </div>
+            )}
           </Card>
         </main>
 
@@ -424,6 +437,16 @@ export default function AdminPage() {
               >
                 <Settings className="w-4 h-4 text-[#E8DCA0]" />
                 <span>Impostazioni</span>
+              </button>
+              <button
+                onClick={() => {
+                  setUserMenuOpen(false)
+                  setActiveTab('archive')
+                }}
+                className="w-full px-4 py-3 text-left text-sm text-white hover:bg-dark-200/50 transition-colors flex items-center space-x-3"
+              >
+                <Archive className="w-4 h-4 text-[#E8DCA0]" />
+                <span>Archivio</span>
               </button>
               <div className="border-t border-dark-200/30 my-1"></div>
               <button

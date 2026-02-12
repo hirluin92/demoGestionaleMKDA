@@ -10,6 +10,8 @@ export const dynamic = 'force-dynamic'
 // Range ragionevoli per misure umane
 const MEASUREMENT_RANGES = {
   peso: { min: 30, max: 300 }, // kg
+  altezza: { min: 100, max: 250 }, // cm
+  massaGrassa: { min: 0, max: 100 }, // %
   braccio: { min: 15, max: 80 }, // cm
   spalle: { min: 80, max: 180 }, // cm
   torace: { min: 60, max: 200 }, // cm
@@ -24,6 +26,14 @@ const measurementSchema = z.object({
   peso: z.number()
     .min(MEASUREMENT_RANGES.peso.min, `Il peso deve essere almeno ${MEASUREMENT_RANGES.peso.min} kg`)
     .max(MEASUREMENT_RANGES.peso.max, `Il peso non può superare ${MEASUREMENT_RANGES.peso.max} kg`)
+    .optional().nullable(),
+  altezza: z.number()
+    .min(MEASUREMENT_RANGES.altezza.min, `L'altezza deve essere almeno ${MEASUREMENT_RANGES.altezza.min} cm`)
+    .max(MEASUREMENT_RANGES.altezza.max, `L'altezza non può superare ${MEASUREMENT_RANGES.altezza.max} cm`)
+    .optional().nullable(),
+  massaGrassa: z.number()
+    .min(MEASUREMENT_RANGES.massaGrassa.min, `La massa grassa deve essere almeno ${MEASUREMENT_RANGES.massaGrassa.min} %`)
+    .max(MEASUREMENT_RANGES.massaGrassa.max, `La massa grassa non può superare ${MEASUREMENT_RANGES.massaGrassa.max} %`)
     .optional().nullable(),
   braccio: z.number()
     .min(MEASUREMENT_RANGES.braccio.min, `La circonferenza del braccio deve essere almeno ${MEASUREMENT_RANGES.braccio.min} cm`)
@@ -108,6 +118,8 @@ export async function POST(request: NextRequest) {
         userId: validatedData.userId,
         measurementDate,
         peso: validatedData.peso,
+        altezza: validatedData.altezza,
+        massaGrassa: validatedData.massaGrassa,
         braccio: validatedData.braccio,
         spalle: validatedData.spalle,
         torace: validatedData.torace,

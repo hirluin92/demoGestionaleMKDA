@@ -5,14 +5,17 @@ import { createPortal } from 'react-dom'
 import { X, Ruler } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import AnatomyPicker3D from '@/components/AnatomyPicker3D'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
-type MeasurementKey = 'peso' | 'braccio' | 'spalle' | 'torace' | 'vita' | 'gamba' | 'fianchi'
+type MeasurementKey = 'peso' | 'altezza' | 'massaGrassa' | 'braccio' | 'spalle' | 'torace' | 'vita' | 'gamba' | 'fianchi'
 
 interface BodyMeasurement {
   id: string
   userId: string
   measurementDate: string
   peso?: number | null
+  altezza?: number | null
+  massaGrassa?: number | null
   braccio?: number | null
   spalle?: number | null
   torace?: number | null
@@ -25,6 +28,7 @@ interface BodyMeasurement {
 export default function ClientMeasurementsView() {
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [selectedMeasurement, setSelectedMeasurement] = useState<BodyMeasurement | null>(null)
   const [mounted, setMounted] = useState(false)
   const [selectedGraph, setSelectedGraph] = useState<MeasurementKey | null>(null)
@@ -40,14 +44,38 @@ export default function ClientMeasurementsView() {
 
   const fetchMeasurements = async () => {
     setLoading(true)
+    setError(null)
     try {
       const response = await fetch('/api/measurements')
       if (response.ok) {
         const data = await response.json()
-        setMeasurements(data)
+        // Valida e normalizza i dati per assicurarsi che abbiano la struttura corretta
+        const normalizedData = Array.isArray(data) ? data.map((m: any) => ({
+          id: m.id || '',
+          userId: m.userId || '',
+          measurementDate: m.measurementDate || new Date().toISOString(),
+          peso: m.peso ?? null,
+          altezza: m.altezza ?? null,
+          massaGrassa: m.massaGrassa ?? null,
+          braccio: m.braccio ?? null,
+          spalle: m.spalle ?? null,
+          torace: m.torace ?? null,
+          vita: m.vita ?? null,
+          gamba: m.gamba ?? null,
+          fianchi: m.fianchi ?? null,
+          notes: m.notes ?? null,
+        })) : []
+        setMeasurements(normalizedData)
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Errore sconosciuto' }))
+        console.error('Errore recupero misurazioni:', response.status, errorData)
+        setError('Impossibile caricare le misurazioni. Riprova più tardi.')
+        setMeasurements([])
       }
     } catch (error) {
       console.error('Errore recupero misurazioni:', error)
+      setError('Errore di connessione. Verifica la tua connessione internet e riprova.')
+      setMeasurements([])
     } finally {
       setLoading(false)
     }
@@ -70,6 +98,24 @@ export default function ClientMeasurementsView() {
     )
   }
 
+  if (error) {
+    return (
+      <div className="empty-state">
+        <div className="empty-state-icon">
+          <Ruler className="w-10 h-10 text-[#D3AF37]" />
+        </div>
+        <h3 className="empty-state-title">Errore nel caricamento</h3>
+        <p className="empty-state-description">{error}</p>
+        <button
+          onClick={fetchMeasurements}
+          className="mt-4 px-4 py-2 bg-[#D3AF37] text-dark-950 rounded-lg font-semibold hover:bg-[#E8DCA0] transition-colors"
+        >
+          Riprova
+        </button>
+      </div>
+    )
+  }
+
   if (measurements.length === 0) {
     return (
       <div className="empty-state">
@@ -78,7 +124,6 @@ export default function ClientMeasurementsView() {
         </div>
         <h3 className="empty-state-title">Nessuna misurazione disponibile</h3>
         <p className="empty-state-description">Le tue misurazioni verranno visualizzate qui</p>
-        <p className="text-sm text-dark-500 mt-2">Le tue misurazioni verranno visualizzate qui</p>
       </div>
     )
   }
@@ -87,25 +132,43 @@ export default function ClientMeasurementsView() {
   const getGraphData = (measurementType: string) => {
     if (!measurements.length) return []
     
-    return measurements
-      .filter(m => {
-        const value = m[measurementType as keyof BodyMeasurement] as number | null | undefined
-        return value !== null && value !== undefined
-      })
-      .map(m => ({
-        date: new Date(m.measurementDate),
-        value: m[measurementType as keyof BodyMeasurement] as number,
-      }))
-      .sort((a, b) => a.date.getTime() - b.date.getTime())
+    try {
+      return measurements
+        .filter(m => {
+          const value = m[measurementType as keyof BodyMeasurement] as number | null | undefined
+          return value !== null && value !== undefined && !isNaN(Number(value))
+        })
+        .map(m => {
+          const date = m.measurementDate ? new Date(m.measurementDate) : new Date()
+          const value = m[measurementType as keyof BodyMeasurement] as number
+          return {
+            date: isNaN(date.getTime()) ? new Date() : date,
+            value: Number(value),
+          }
+        })
+        .filter(d => !isNaN(d.value))
+        .sort((a, b) => a.date.getTime() - b.date.getTime())
+    } catch (error) {
+      console.error('Errore generazione dati grafico:', error)
+      return []
+    }
   }
 
   const handleMuscleClick = (muscleId: MeasurementKey) => {
+    // Salva la posizione di scroll corrente per evitare che cambi
+    const scrollPosition = window.scrollY || document.documentElement.scrollTop
+    
     // Se c'è già un grafico aperto per questa parte, chiudilo, altrimenti aprilo
     if (selectedGraph === muscleId) {
       setSelectedGraph(null)
     } else {
       setSelectedGraph(muscleId)
     }
+    
+    // Ripristina la posizione di scroll dopo un breve delay per evitare scroll automatico
+    setTimeout(() => {
+      window.scrollTo(0, scrollPosition)
+    }, 0)
   }
 
   return (
@@ -121,22 +184,85 @@ export default function ClientMeasurementsView() {
             Visualizzazione Corporea (3D)
           </h4>
           
-          {/* Bottone Peso */}
-          <div className="flex gap-2 items-center mb-3">
+          {/* Pulsanti Misurazioni */}
+          <div className="flex gap-2 items-center mb-3 flex-wrap">
             <button
-              className="px-3 py-1 rounded-full border border-[#D3AF37]/60 text-xs text-white hover:bg-white/10 transition-colors"
+              className={`px-3 py-1 rounded-full border text-xs transition-colors ${
+                selectedGraph === 'peso'
+                  ? 'bg-[#D3AF37] text-dark-950 border-[#D3AF37]'
+                  : 'border-[#D3AF37]/60 text-white hover:bg-white/10'
+              }`}
               onClick={() => handleMuscleClick('peso')}
             >
               Peso
             </button>
+            <button
+              className={`px-3 py-1 rounded-full border text-xs transition-colors ${
+                selectedGraph === 'altezza'
+                  ? 'bg-[#D3AF37] text-dark-950 border-[#D3AF37]'
+                  : 'border-[#D3AF37]/60 text-white hover:bg-white/10'
+              }`}
+              onClick={() => handleMuscleClick('altezza')}
+            >
+              Altezza
+            </button>
+            <button
+              className={`px-3 py-1 rounded-full border text-xs transition-colors ${
+                selectedGraph === 'massaGrassa'
+                  ? 'bg-[#D3AF37] text-dark-950 border-[#D3AF37]'
+                  : 'border-[#D3AF37]/60 text-white hover:bg-white/10'
+              }`}
+              onClick={() => handleMuscleClick('massaGrassa')}
+            >
+              % Massa Grassa
+            </button>
             <span className="text-xs text-gray-400">Clicca i muscoli sul modello 3D</span>
           </div>
 
-          <AnatomyPicker3D
-            modelUrl="/models/anatomy.glb"
-            selected={selectedGraph}
-            onSelect={handleMuscleClick}
-          />
+          {mounted && (
+            <div className="relative">
+              <ErrorBoundary
+                fallback={
+                  <div className="glass-card rounded-lg p-8 text-center" style={{ height: '520px' }}>
+                    <Ruler className="w-16 h-16 mx-auto mb-4 text-[#D3AF37]" />
+                    <p className="text-white mb-4">Modello 3D non disponibile</p>
+                    <p className="text-sm text-gray-400 mb-6">
+                      Usa i pulsanti qui sotto per selezionare le misurazioni
+                    </p>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {(['peso', 'altezza', 'massaGrassa', 'braccio', 'spalle', 'torace', 'vita', 'gamba', 'fianchi'] as MeasurementKey[]).map((key) => (
+                        <button
+                          key={key}
+                          className={`px-3 py-1 rounded-full border text-xs transition-colors ${
+                            selectedGraph === key
+                              ? 'bg-[#D3AF37] text-dark-950 border-[#D3AF37]'
+                              : 'border-[#D3AF37]/60 text-white hover:bg-white/10'
+                          }`}
+                          onClick={() => handleMuscleClick(key)}
+                        >
+                          {key === 'peso' && 'Peso'}
+                          {key === 'altezza' && 'Altezza'}
+                          {key === 'massaGrassa' && '% Massa Grassa'}
+                          {key === 'braccio' && 'Braccio'}
+                          {key === 'spalle' && 'Spalle'}
+                          {key === 'torace' && 'Torace'}
+                          {key === 'vita' && 'Vita'}
+                          {key === 'gamba' && 'Gamba'}
+                          {key === 'fianchi' && 'Fianchi'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                }
+              >
+                <AnatomyPicker3D
+                  modelUrl="/models/anatomy.glb"
+                  selected={selectedGraph}
+                  onSelect={handleMuscleClick}
+                />
+              </ErrorBoundary>
+            </div>
+          )}
         </div>
 
           {/* Micro Grafico - Appare quando si clicca su una parte del corpo */}
@@ -145,8 +271,10 @@ export default function ClientMeasurementsView() {
               <div className="flex justify-between items-center mb-3">
                 <h4 className="text-sm font-bold gold-text-gradient">
                   {selectedGraph === 'peso' && 'Peso'}
+                  {selectedGraph === 'altezza' && 'Altezza'}
+                  {selectedGraph === 'massaGrassa' && '% Massa Grassa'}
                   {selectedGraph === 'braccio' && 'Braccio'}
-                  {selectedGraph === 'spalle' && 'Circonferenza Spalle'}
+                  {selectedGraph === 'spalle' && 'Spalle'}
                   {selectedGraph === 'torace' && 'Torace'}
                   {selectedGraph === 'vita' && 'Vita'}
                   {selectedGraph === 'gamba' && 'Gamba'}
@@ -379,13 +507,15 @@ export default function ClientMeasurementsView() {
                     {m.measurementDate ? formatDate(m.measurementDate) : 'N/A'}
                   </span>
                   <span className="text-xs text-gray-400">
-                    {m.peso || '-'}kg
+                    {m.peso != null ? `${m.peso} kg` : '-'}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-xs text-gray-400">
-                  <div>Torace: {m.torace || '-'}cm</div>
-                  <div>Vita: {m.vita || '-'}cm</div>
-                  <div>Fianchi: {m.fianchi || '-'}cm</div>
+                  <div>Altezza: {m.altezza != null ? `${m.altezza} cm` : '-'}</div>
+                  <div>% Massa Grassa: {m.massaGrassa != null ? `${m.massaGrassa} %` : '-'}</div>
+                  <div>Torace: {m.torace != null ? `${m.torace} cm` : '-'}</div>
+                  <div>Vita: {m.vita != null ? `${m.vita} cm` : '-'}</div>
+                  <div>Fianchi: {m.fianchi != null ? `${m.fianchi} cm` : '-'}</div>
                 </div>
                 <div className="text-xs text-gold-400 mt-2 text-center">
                   👆 Clicca per dettagli completi
@@ -430,31 +560,57 @@ export default function ClientMeasurementsView() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="glass-card rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Peso</p>
-                  <p className="text-lg font-semibold">{selectedMeasurement?.peso || '-'} kg</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement?.peso != null ? `${selectedMeasurement.peso} kg` : '-'}
+                  </p>
+                </div>
+                <div className="glass-card rounded-lg p-4">
+                  <p className="text-sm text-gray-400 mb-1">Altezza</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement?.altezza != null ? `${selectedMeasurement.altezza} cm` : '-'}
+                  </p>
+                </div>
+                <div className="glass-card rounded-lg p-4">
+                  <p className="text-sm text-gray-400 mb-1">% Massa Grassa</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement?.massaGrassa != null ? `${selectedMeasurement.massaGrassa} %` : '-'}
+                  </p>
                 </div>
                 <div className="glass-card rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Braccio</p>
-                  <p className="text-lg font-semibold">{selectedMeasurement?.braccio || '-'} cm</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement?.braccio != null ? `${selectedMeasurement.braccio} cm` : '-'}
+                  </p>
                 </div>
                 <div className="glass-card rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Spalle</p>
-                  <p className="text-lg font-semibold">{selectedMeasurement?.spalle || '-'} cm</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement?.spalle != null ? `${selectedMeasurement.spalle} cm` : '-'}
+                  </p>
                 </div>
                 <div className="glass-card rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Torace</p>
-                  <p className="text-lg font-semibold">{selectedMeasurement?.torace || '-'} cm</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement?.torace != null ? `${selectedMeasurement.torace} cm` : '-'}
+                  </p>
                 </div>
                 <div className="glass-card rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Vita</p>
-                  <p className="text-lg font-semibold">{selectedMeasurement?.vita || '-'} cm</p>
-                </div>
-                <div className="glass-card rounded-lg p-4">
-                  <p className="text-sm text-gray-400 mb-1">Fianchi</p>
-                  <p className="text-lg font-semibold">{selectedMeasurement?.fianchi || '-'} cm</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement?.vita != null ? `${selectedMeasurement.vita} cm` : '-'}
+                  </p>
                 </div>
                 <div className="glass-card rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Gamba</p>
-                  <p className="text-lg font-semibold">{selectedMeasurement?.gamba || '-'} cm</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement?.gamba != null ? `${selectedMeasurement.gamba} cm` : '-'}
+                  </p>
+                </div>
+                <div className="glass-card rounded-lg p-4">
+                  <p className="text-sm text-gray-400 mb-1">Fianchi</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMeasurement?.fianchi != null ? `${selectedMeasurement.fianchi} cm` : '-'}
+                  </p>
                 </div>
               </div>
 

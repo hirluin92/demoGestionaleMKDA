@@ -26,7 +26,6 @@ import BookingsList from '@/components/BookingsList'
 import ClientMeasurementsView from '@/components/ClientMeasurementsView'
 import ProfileModal from '@/components/ProfileModal'
 import SettingsModal from '@/components/SettingsModal'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Label } from '@/components/ui/Label'
 import { Badge } from '@/components/ui/Badge'
@@ -151,7 +150,6 @@ export default function DashboardPage() {
   )
 
   return (
-    <ErrorBoundary>
       <div className="min-h-screen relative overflow-hidden">
         
         {/* Header Premium - Mobile Optimized */}
@@ -447,25 +445,7 @@ export default function DashboardPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ErrorBoundary
-                    fallback={
-                      <div className="text-center py-8">
-                        <Ruler className="w-12 h-12 mx-auto mb-4 text-[#D3AF37]" />
-                        <h3 className="text-lg font-semibold mb-2">Errore nel caricamento delle misurazioni</h3>
-                        <p className="text-sm text-gray-400 mb-4">
-                          Si è verificato un problema. Prova a ricaricare la pagina.
-                        </p>
-                        <button
-                          onClick={() => window.location.reload()}
-                          className="px-4 py-2 bg-[#D3AF37] text-dark-950 rounded-lg font-semibold hover:bg-[#E8DCA0] transition-colors"
-                        >
-                          Ricarica Pagina
-                        </button>
-                      </div>
-                    }
-                  >
-                    <ClientMeasurementsView />
-                  </ErrorBoundary>
+                  <ClientMeasurementsView />
                 </CardContent>
               </Card>
             </div>
@@ -564,6 +544,5 @@ export default function DashboardPage() {
           document.body
         )}
       </div>
-    </ErrorBoundary>
   )
 }

@@ -579,32 +579,34 @@ export default function AdminUsersList({ archiveMode = false }: AdminUsersListPr
                     )}
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="flex gap-2 items-center">
-                      <Button
-                        variant="outline-gold"
-                        size="sm"
-                        onClick={() => {
-                          setEditingUser(user)
-                          setIsEditModalOpen(true)
-                        }}
-                        className="whitespace-nowrap"
-                      >
-                        <Edit className="w-4 h-4 mr-1.5 flex-shrink-0" />
-                        <span className="hidden xl:inline">Modifica</span>
-                        <span className="xl:hidden">Mod.</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedUser({ id: user.id, name: user.name, email: user.email })
-                          setIsMeasurementModalOpen(true)
-                        }}
-                        className="whitespace-nowrap"
-                      >
-                        <span className="hidden xl:inline">Misurazioni</span>
-                        <span className="xl:hidden">Mis.</span>
-                      </Button>
+                    <div className="flex gap-2 items-start">
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          variant="outline-gold"
+                          size="sm"
+                          onClick={() => {
+                            setEditingUser(user)
+                            setIsEditModalOpen(true)
+                          }}
+                          className="whitespace-nowrap"
+                        >
+                          <Edit className="w-4 h-4 mr-1.5 flex-shrink-0" />
+                          <span className="hidden xl:inline">Modifica</span>
+                          <span className="xl:hidden">Mod.</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser({ id: user.id, name: user.name, email: user.email })
+                            setIsMeasurementModalOpen(true)
+                          }}
+                          className="whitespace-nowrap"
+                        >
+                          <span className="hidden xl:inline">Misurazioni</span>
+                          <span className="xl:hidden">Mis.</span>
+                        </Button>
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"

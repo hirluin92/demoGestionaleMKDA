@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Ruler } from 'lucide-react'
 import Button from '@/components/ui/Button'
-import AnatomyPicker3D from '@/components/AnatomyPicker3D'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
+import AnatomyPickerSVG from '@/components/AnatomyPickerSVG'
 
 type MeasurementKey = 'peso' | 'altezza' | 'massaGrassa' | 'braccio' | 'spalle' | 'torace' | 'vita' | 'gamba' | 'fianchi'
 
@@ -178,10 +177,10 @@ export default function ClientMeasurementsView() {
           📊 Le Tue Misurazioni
         </h3>
 
-        {/* Manichino Interattivo 3D */}
+        {/* Manichino Interattivo SVG */}
         <div className="mb-6">
           <h4 className="text-md font-bold mb-4 gold-text-gradient heading-font">
-            Visualizzazione Corporea (3D)
+            Visualizzazione Corporea
           </h4>
           
           {/* Pulsanti Misurazioni */}
@@ -216,51 +215,12 @@ export default function ClientMeasurementsView() {
             >
               % Massa Grassa
             </button>
-            <span className="text-xs text-gray-400">Clicca i muscoli sul modello 3D</span>
+            <span className="text-xs text-gray-400">Clicca i muscoli sul modello</span>
           </div>
 
           {mounted && (
             <div className="relative">
-              <ErrorBoundary
-                fallback={
-                  <div className="glass-card rounded-lg p-8 text-center" style={{ height: '520px' }}>
-                    <Ruler className="w-16 h-16 mx-auto mb-4 text-[#D3AF37]" />
-                    <p className="text-white mb-4">Modello 3D non disponibile</p>
-                    <p className="text-sm text-gray-400 mb-6">
-                      Usa i pulsanti qui sotto per selezionare le misurazioni
-                    </p>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                      {(['peso', 'altezza', 'massaGrassa', 'braccio', 'spalle', 'torace', 'vita', 'gamba', 'fianchi'] as MeasurementKey[]).map((key) => (
-                        <button
-                          key={key}
-                          className={`px-3 py-1 rounded-full border text-xs transition-colors ${
-                            selectedGraph === key
-                              ? 'bg-[#D3AF37] text-dark-950 border-[#D3AF37]'
-                              : 'border-[#D3AF37]/60 text-white hover:bg-white/10'
-                          }`}
-                          onClick={() => handleMuscleClick(key)}
-                        >
-                          {key === 'peso' && 'Peso'}
-                          {key === 'altezza' && 'Altezza'}
-                          {key === 'massaGrassa' && '% Massa Grassa'}
-                          {key === 'braccio' && 'Braccio'}
-                          {key === 'spalle' && 'Spalle'}
-                          {key === 'torace' && 'Torace'}
-                          {key === 'vita' && 'Vita'}
-                          {key === 'gamba' && 'Gamba'}
-                          {key === 'fianchi' && 'Fianchi'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                }
-              >
-                <AnatomyPicker3D
-                  modelUrl="/models/anatomy.glb"
-                  selected={selectedGraph}
-                  onSelect={handleMuscleClick}
-                />
-              </ErrorBoundary>
+              <AnatomyPickerSVG selected={selectedGraph} onSelect={handleMuscleClick} />
             </div>
           )}
         </div>

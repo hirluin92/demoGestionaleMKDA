@@ -88,6 +88,14 @@ body {
 
 .parallax-layer-1 {
   background: radial-gradient(ellipse at 30% 20%, rgba(var(--color-gold-main-rgb), 0.06) 0%, transparent 50%);
+  image-rendering: auto;
+  -webkit-image-rendering: auto;
+  image-rendering: crisp-edges;
+  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover;
+  background-size: cover;
+  will-change: transform;
 }
 
 .parallax-layer-2 {
@@ -434,6 +442,7 @@ select.input-field {
   -moz-appearance: none;
   appearance: none;
   background-image: none;
+  cursor: pointer;
 }
 
 /* Ensure select options are styled correctly */
@@ -441,6 +450,16 @@ select.input-field {
   background: rgba(40, 40, 40, 0.95);
   color: #fff;
   padding: 12px 16px;
+}
+
+/* Mobile-specific select styling */
+@media (max-width: 768px) {
+  select.input-field,
+  .input-field select {
+    font-size: 16px; /* Prevent zoom on iOS */
+    padding: 12px 40px 12px 16px; /* Ensure consistent padding with other fields */
+    min-height: 44px; /* Minimum touch target size */
+  }
 }
 
 /* Custom styling for date and time inputs */

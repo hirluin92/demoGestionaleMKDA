@@ -24,9 +24,9 @@ const updateBookingSchema = z.object({
     .refine((time) => {
       const [hours, minutes] = time.split(':').map(Number)
       const totalMinutes = hours * 60 + minutes
-      // Orario valido: dalle 06:00 alle 22:30
-      return totalMinutes >= 360 && totalMinutes <= 1350
-    }, 'Orario non valido (06:00-22:30)'),
+      // Orario valido: dalle 06:00 alle 21:30 (non si può prenotare alle 22:30)
+      return totalMinutes >= 360 && totalMinutes <= 1290
+    }, 'Orario non valido (06:00-21:30)'),
 })
 
 // DELETE - Disdici prenotazione (solo admin)

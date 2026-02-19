@@ -91,13 +91,13 @@ export async function GET(request: NextRequest) {
         })
         
         const allSlots: string[] = []
-        // Genera slot dalle 06:00 alle 22:30
+        // Genera slot dalle 06:00 alle 21:30 (non si può prenotare alle 22:30)
         // Dalle 06:00 alle 13:00: ogni ora
         for (let hour = 6; hour < 14; hour++) {
           allSlots.push(`${hour.toString().padStart(2, '0')}:00`)
         }
-        // Dalle 15:30 in poi: ogni ora a partire da 15:30 fino a 22:30
-        for (let hour = 15; hour < 23; hour++) {
+        // Dalle 15:30 in poi: ogni ora a partire da 15:30 fino a 21:30
+        for (let hour = 15; hour < 22; hour++) {
           allSlots.push(`${hour.toString().padStart(2, '0')}:30`)
         }
         

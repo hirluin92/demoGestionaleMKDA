@@ -36,7 +36,7 @@ export default function BookingForm({ packages, onSuccess }: BookingFormProps) {
     const date = addDays(new Date(), i)
     return {
       value: date.toISOString().split('T')[0],
-      label: format(date, 'd MMM yyyy', { locale: it })
+      label: format(date, 'EEE d MMM yyyy', { locale: it })
     }
   })
 

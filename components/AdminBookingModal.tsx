@@ -153,7 +153,7 @@ export default function AdminBookingModal({ isOpen, onClose, onSuccess }: AdminB
     const date = addDays(new Date(), i)
     return {
       value: date.toISOString().split('T')[0],
-      label: format(date, 'd MMM yyyy', { locale: it })
+      label: format(date, 'EEE d MMM yyyy', { locale: it })
     }
   })
 

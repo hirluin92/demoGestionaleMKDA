@@ -17,6 +17,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "seed:admin": "tsx scripts/seed-admin.ts",
+    "create:admin": "tsx scripts/create-admin.ts",
     "check:admin": "tsx scripts/check-admin.ts",
     "setup:neon": "tsx scripts/setup-neon-db.ts",
     "check:neon": "tsx scripts/check-neon-db.ts",

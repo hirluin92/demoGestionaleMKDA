@@ -28,7 +28,16 @@ export default function AdminPage() {
   const router = useRouter()
   useSessionSecurity() // Aggiunge controlli di sicurezza sulla sessione
   useScrollAnimation() // Attiva animazioni scroll
-  const [activeTab, setActiveTab] = useState<'users' | 'packages' | 'calendar' | 'archive'>('users')
+  // Inizializza activeTab da localStorage o default a 'users'
+  const [activeTab, setActiveTab] = useState<'users' | 'packages' | 'calendar' | 'archive'>(() => {
+    if (typeof window !== 'undefined') {
+      const savedTab = localStorage.getItem('adminActiveTab') as 'users' | 'packages' | 'calendar' | 'archive' | null
+      if (savedTab && ['users', 'packages', 'calendar', 'archive'].includes(savedTab)) {
+        return savedTab
+      }
+    }
+    return 'users'
+  })
   const [showCreateUser, setShowCreateUser] = useState(false)
   const [showCreatePackage, setShowCreatePackage] = useState(false)
   const [showAdminBooking, setShowAdminBooking] = useState(false)
@@ -45,6 +54,13 @@ export default function AdminPage() {
     setMounted(true)
     return () => setMounted(false)
   }, [])
+
+  // Salva il tab attivo nel localStorage quando cambia
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('adminActiveTab', activeTab)
+    }
+  }, [activeTab])
 
   useEffect(() => {
     if (status === 'unauthenticated') {

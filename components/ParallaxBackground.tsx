@@ -6,12 +6,15 @@ export function ParallaxBackground() {
       <div 
         className="parallax-layer parallax-layer-1" 
         style={{
-          backgroundImage: "url('/sfondo.jpg')",
+          backgroundImage: "url('/sfondo3.png')",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
-          opacity: 1
-        }}
+          backgroundAttachment: 'fixed',
+          imageRendering: 'auto',
+          opacity: 1,
+          willChange: 'transform'
+        } as React.CSSProperties}
       />
       <div className="parallax-layer parallax-layer-2" />
       <div className="parallax-layer parallax-layer-3" />

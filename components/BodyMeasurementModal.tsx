@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Loader2 } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import AnatomyPickerSVG from '@/components/AnatomyPickerSVG'
 
 interface BodyMeasurement {
   id?: string
@@ -40,7 +41,6 @@ export default function BodyMeasurementModal({
   const [latestMeasurement, setLatestMeasurement] = useState<BodyMeasurement | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [highlightedMuscle, setHighlightedMuscle] = useState<string | null>(null)
   const [selectedMeasurement, setSelectedMeasurement] = useState<BodyMeasurement | null>(null)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [showWarningModal, setShowWarningModal] = useState(false)
@@ -257,209 +257,48 @@ export default function BodyMeasurementModal({
             <h3 className="text-xl font-bold mb-4 gold-text-gradient heading-font">
               Visualizzazione Corporea
             </h3>
-            <div className="body-silhouette" style={{ position: 'relative' }}>
-              <svg viewBox="0 0 300 500" style={{ width: '100%', height: 'auto' }}>
-                <defs>
-                  <filter id="glow">
-                    <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                    <feMerge>
-                      <feMergeNode in="coloredBlur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                </defs>
-
-                {/* Testa */}
-                <ellipse cx="150" cy="40" rx="25" ry="30" fill="#2a2a2a" stroke="#444" strokeWidth="1" />
-
-                {/* Spalle */}
-                <g
-                  className={`muscle-group ${highlightedMuscle === 'spalle' ? 'highlighted' : ''}`}
-                  data-muscle="spalle"
-                  onClick={() => handleMuscleClick('spalle')}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <ellipse
-                    cx="115"
-                    cy="105"
-                    rx="22"
-                    ry="28"
-                    fill="#3a3a3a"
-                    stroke="#D3AF37"
-                    strokeWidth="2"
-                    transform="rotate(-15 115 105)"
-                  />
-                  <ellipse
-                    cx="185"
-                    cy="105"
-                    rx="22"
-                    ry="28"
-                    fill="#3a3a3a"
-                    stroke="#D3AF37"
-                    strokeWidth="2"
-                    transform="rotate(15 185 105)"
-                  />
-                </g>
-
-                {/* Torace */}
-                <g
-                  className={`muscle-group ${highlightedMuscle === 'torace' ? 'highlighted' : ''}`}
-                  data-muscle="torace"
-                  onClick={() => handleMuscleClick('torace')}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <path
-                    d="M 130 90 Q 125 110, 130 135 L 145 135 L 150 100 Z"
-                    fill="#3a3a3a"
-                    stroke="#D3AF37"
-                    strokeWidth="2"
-                  />
-                  <path
-                    d="M 170 90 Q 175 110, 170 135 L 155 135 L 150 100 Z"
-                    fill="#3a3a3a"
-                    stroke="#D3AF37"
-                    strokeWidth="2"
-                  />
-                  <line x1="150" y1="100" x2="150" y2="135" stroke="#2a2a2a" strokeWidth="2" />
-                </g>
-
-                {/* Braccio (unificato) */}
-                <g
-                  className={`muscle-group ${highlightedMuscle === 'braccio' ? 'highlighted' : ''}`}
-                  data-muscle="braccio"
-                  onClick={() => handleMuscleClick('braccio')}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <ellipse
-                    cx="95"
-                    cy="140"
-                    rx="13"
-                    ry="35"
-                    fill="#3a3a3a"
-                    stroke="#D3AF37"
-                    strokeWidth="2"
-                    transform="rotate(20 95 140)"
-                  />
-                  <ellipse
-                    cx="205"
-                    cy="140"
-                    rx="13"
-                    ry="35"
-                    fill="#3a3a3a"
-                    stroke="#D3AF37"
-                    strokeWidth="2"
-                    transform="rotate(-20 205 140)"
-                  />
-                  <path
-                    d="M 85 175 Q 75 205, 70 240"
-                    stroke="#D3AF37"
-                    strokeWidth="18"
-                    fill="none"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M 215 175 Q 225 205, 230 240"
-                    stroke="#D3AF37"
-                    strokeWidth="18"
-                    fill="none"
-                    strokeLinecap="round"
-                  />
-                </g>
-
-                {/* Addominali/Vita */}
-                <g
-                  className={`muscle-group ${highlightedMuscle === 'vita' ? 'highlighted' : ''}`}
-                  data-muscle="vita"
-                  onClick={() => handleMuscleClick('vita')}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <rect x="135" y="135" width="30" height="70" rx="5" fill="#3a3a3a" stroke="#D3AF37" strokeWidth="2" />
-                  <line x1="150" y1="135" x2="150" y2="205" stroke="#2a2a2a" strokeWidth="2" />
-                  <line x1="135" y1="155" x2="165" y2="155" stroke="#2a2a2a" strokeWidth="1.5" />
-                  <line x1="135" y1="170" x2="165" y2="170" stroke="#2a2a2a" strokeWidth="1.5" />
-                  <line x1="135" y1="185" x2="165" y2="185" stroke="#2a2a2a" strokeWidth="1.5" />
-                </g>
-
-                {/* Fianchi */}
-                <g
-                  className={`muscle-group ${highlightedMuscle === 'fianchi' ? 'highlighted' : ''}`}
-                  data-muscle="fianchi"
-                  onClick={() => handleMuscleClick('fianchi')}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <ellipse cx="150" cy="220" rx="35" ry="22" fill="#3a3a3a" stroke="#D3AF37" strokeWidth="2" />
-                </g>
-
-                {/* Gamba (unificata) */}
-                <g
-                  className={`muscle-group ${highlightedMuscle === 'gamba' ? 'highlighted' : ''}`}
-                  data-muscle="gamba"
-                  onClick={() => handleMuscleClick('gamba')}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <ellipse cx="138" cy="290" rx="20" ry="50" fill="#3a3a3a" stroke="#D3AF37" strokeWidth="2" />
-                  <ellipse cx="162" cy="290" rx="20" ry="50" fill="#3a3a3a" stroke="#D3AF37" strokeWidth="2" />
-                  <ellipse cx="138" cy="390" rx="15" ry="35" fill="#3a3a3a" stroke="#D3AF37" strokeWidth="2" />
-                  <ellipse cx="162" cy="390" rx="15" ry="35" fill="#3a3a3a" stroke="#D3AF37" strokeWidth="2" />
-                </g>
-              </svg>
-
-              {/* Measurement Points - Solo parti rilevanti */}
-              <div
-                className="measurement-point"
-                style={{ left: '22%', top: '21%' }}
-                data-muscle="spalle"
-                data-label="Spalle"
-                onClick={() => handleMuscleClick('spalle')}
-                onMouseEnter={() => setHighlightedMuscle('spalle')}
-                onMouseLeave={() => setHighlightedMuscle(null)}
-              />
-              <div
-                className="measurement-point"
-                style={{ left: '15%', top: '30%' }}
-                data-muscle="braccio"
-                data-label="Braccio"
-                onClick={() => handleMuscleClick('braccio')}
-                onMouseEnter={() => setHighlightedMuscle('braccio')}
-                onMouseLeave={() => setHighlightedMuscle(null)}
-              />
-              <div
-                className="measurement-point"
-                style={{ left: '50%', top: '25%' }}
-                data-muscle="torace"
-                data-label="Torace"
-                onClick={() => handleMuscleClick('torace')}
-                onMouseEnter={() => setHighlightedMuscle('torace')}
-                onMouseLeave={() => setHighlightedMuscle(null)}
-              />
-              <div
-                className="measurement-point"
-                style={{ left: '50%', top: '37%' }}
-                data-muscle="vita"
-                data-label="Vita"
-                onClick={() => handleMuscleClick('vita')}
-                onMouseEnter={() => setHighlightedMuscle('vita')}
-                onMouseLeave={() => setHighlightedMuscle(null)}
-              />
-              <div
-                className="measurement-point"
-                style={{ left: '50%', top: '44%' }}
-                data-muscle="fianchi"
-                data-label="Fianchi"
-                onClick={() => handleMuscleClick('fianchi')}
-                onMouseEnter={() => setHighlightedMuscle('fianchi')}
-                onMouseLeave={() => setHighlightedMuscle(null)}
-              />
-              <div
-                className="measurement-point"
-                style={{ left: '50%', top: '60%' }}
-                data-muscle="gamba"
-                data-label="Gamba"
-                onClick={() => handleMuscleClick('gamba')}
-                onMouseEnter={() => setHighlightedMuscle('gamba')}
-                onMouseLeave={() => setHighlightedMuscle(null)}
-              />
+            
+            {/* Pulsanti Misurazioni */}
+            <div className="flex gap-2 items-center mb-3 flex-wrap">
+              <button
+                className={`px-3 py-1 rounded-full border text-xs transition-colors ${
+                  selectedGraph === 'peso'
+                    ? 'bg-[#D3AF37] text-dark-950 border-[#D3AF37]'
+                    : 'border-[#D3AF37]/60 text-white hover:bg-white/10'
+                }`}
+                onClick={() => {
+                  if (selectedGraph === 'peso') {
+                    setSelectedGraph(null)
+                  } else {
+                    setSelectedGraph('peso')
+                  }
+                }}
+              >
+                Peso
+              </button>
+              <button
+                className={`px-3 py-1 rounded-full border text-xs transition-colors ${
+                  selectedGraph === 'massaGrassa'
+                    ? 'bg-[#D3AF37] text-dark-950 border-[#D3AF37]'
+                    : 'border-[#D3AF37]/60 text-white hover:bg-white/10'
+                }`}
+                onClick={() => {
+                  if (selectedGraph === 'massaGrassa') {
+                    setSelectedGraph(null)
+                  } else {
+                    setSelectedGraph('massaGrassa')
+                  }
+                }}
+              >
+                % Massa Grassa
+              </button>
+              <span className="text-xs text-gray-400">Clicca i muscoli sul modello</span>
             </div>
+            
+            <AnatomyPickerSVG 
+              selected={selectedGraph as 'peso' | 'altezza' | 'massaGrassa' | 'braccio' | 'spalle' | 'torace' | 'vita' | 'gamba' | 'fianchi' | null} 
+              onSelect={handleMuscleClick} 
+            />
 
             {/* Micro Grafico - Appare quando si clicca su una parte del corpo */}
             {selectedGraph && (

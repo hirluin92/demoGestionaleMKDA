@@ -287,7 +287,7 @@ export default function AdminCalendar() {
     for (let h = 6; h < 14; h++) {
       hours.push({ hour: h, minute: 0 })
     }
-    // Dalle 15:30 in poi: ogni ora a partire da 15:30 fino a 22:30
+    // Dalle 15:30 in poi: ogni ora a partire da 15:30 fino a 22:30 (mostra anche 22:30 per completezza visiva)
     for (let h = 15; h < 23; h++) {
       hours.push({ hour: h, minute: 30 })
     }
@@ -295,7 +295,7 @@ export default function AdminCalendar() {
     const HOUR_HEIGHT = isMobile ? 40 : 60
     const PX_PER_MIN = HOUR_HEIGHT / 60
     const dayStartMin = 6 * 60 // Inizia alle 6:00
-    const dayEndMin = 22 * 60 + 30 // Termina alle 22:30
+    const dayEndMin = 22 * 60 + 30 // Termina alle 22:30 (mostra la cella completa)
     // Calcola l'altezza totale: dalle 6:00 alle 22:30
     const totalMinutes = dayEndMin - dayStartMin
     const timelineHeight = totalMinutes * PX_PER_MIN
@@ -312,7 +312,7 @@ export default function AdminCalendar() {
           <h3 className="text-lg font-bold gold-text-gradient heading-font mb-1">
             {dayAppointments.length} Appuntament{dayAppointments.length !== 1 ? 'i' : 'o'}
           </h3>
-            <p className="text-xs text-gray-400">Orario: 06:00 - 13:00, 15:30 - 22:30</p>
+            <p className="text-xs text-gray-400">Orario: 06:00 - 13:00, 15:30 - 21:30 (ultimo slot prenotabile)</p>
         </div>
 
         {/* UNICO SCROLL CONTAINER - ore + timeline insieme */}
@@ -363,9 +363,10 @@ export default function AdminCalendar() {
                   const newHour = Math.floor(newMinutes / 60)
                   const newMinute = newMinutes % 60
                   
-                  // Valida l'orario (06:00-22:30)
-                  if (newHour < 6 || (newHour === 22 && newMinute > 30) || newHour >= 23) {
-                    alert('Orario non valido. Gli slot sono disponibili dalle 06:00 alle 22:30.')
+                  // Valida l'orario - usa i minuti calcolati, non l'ora arrotondata
+                  const rawMinutes = newHour * 60 + newMinute
+                  if (rawMinutes < 6 * 60 || rawMinutes > 23 * 60) {
+                    alert('Orario non valido. Gli slot sono disponibili dalle 06:00 alle 21:30.')
                     return
                   }
                   
@@ -382,16 +383,22 @@ export default function AdminCalendar() {
                   if (finalHour < 14) {
                     // Dalle 6 alle 13: solo :00
                     finalMinute = 0
-                  } else if (finalHour >= 15) {
-                    // Dalle 15:30 in poi: solo :30
-                    finalMinute = 30
-                    if (finalHour === 15 && finalMinute === 30) {
-                      // OK
-                    } else if (finalMinute < 30) {
-                      finalMinute = 30
-                    } else if (finalMinute > 30) {
+                    // Se i minuti originali erano > 30, siamo più vicini all'ora successiva
+                    if (newMinute > 30) {
                       finalHour += 1
-                      finalMinute = 30
+                    }
+                    // Clamp
+                    if (finalHour >= 14) {
+                      finalHour = 13
+                    }
+                  } else if (finalHour >= 15) {
+                    // Dalle 15:30 in poi: tutti gli slot sono a :30
+                    // Basta fissare il minuto a :30 (l'ora è già corretta dal calcolo Y)
+                    finalMinute = 30
+                    
+                    // Clamp al massimo 21:30 (ultimo slot prenotabile)
+                    if (finalHour > 21) {
+                      finalHour = 21
                     }
                   }
                   
@@ -399,7 +406,19 @@ export default function AdminCalendar() {
                   
                   if (newTime === currentTime) return
                   
-                  // Aggiorna l'appuntamento
+                  // OPTIMISTIC UPDATE - aggiorna subito la UI
+                  setBookings(prev => prev.map(b => {
+                    if (b.id === appointmentId) {
+                      return {
+                        ...b,
+                        date: new Date(dateStr).toISOString(),
+                        time: newTime,
+                      }
+                    }
+                    return b
+                  }))
+                  
+                  // Poi aggiorna il server in background (senza await bloccare la UI)
                   try {
                     const response = await fetch(`/api/admin/bookings/${appointmentId}`, {
                       method: 'PUT',
@@ -410,14 +429,15 @@ export default function AdminCalendar() {
                       }),
                     })
                     
-                    if (response.ok) {
-                      fetchBookings()
-                    } else {
+                    if (!response.ok) {
                       const data = await response.json()
                       alert(data.error || 'Errore nello spostamento dell\'appuntamento')
+                      fetchBookings() // Rollback: ricarica dallo stato reale
                     }
+                    // Se ok, NON chiamare fetchBookings() - la UI è già aggiornata
                   } catch (error) {
                     alert('Errore nello spostamento dell\'appuntamento')
+                    fetchBookings() // Rollback
                   }
                 }}
               >
@@ -433,6 +453,11 @@ export default function AdminCalendar() {
                       />
                     )
                   })}
+                  {/* Linea finale per delimitare l'ultima cella (22:30) */}
+                  <div
+                    className="absolute left-0 right-0 border-t border-white/10 z-0"
+                    style={{ top: timelineHeight }}
+                  />
 
                 {/* Eventi assoluti - raggruppati per ora */}
                 {(() => {
@@ -473,13 +498,23 @@ export default function AdminCalendar() {
                       
                       const clampedStart = Math.max(startMin, dayStartMin)
                       // Se l'appuntamento si estende nella pausa pranzo, taglialo
-                      let clampedEnd = Math.min(endMin, dayStartMin + totalMinutes)
+                      let clampedEnd = Math.min(endMin, dayEndMin)
                       if (clampedStart < lunchBreakStart && clampedEnd > lunchBreakStart) {
                         clampedEnd = lunchBreakStart // Taglia alla pausa pranzo
                       }
+                      
+                      // Se l'appuntamento inizia nell'ultima cella (22:30), assicurati che abbia l'altezza completa della cella
+                      let forcedFullCell = false
+                      if (clampedStart >= dayEndMin - 60) {
+                        forcedFullCell = true
+                      }
 
                       const top = (clampedStart - dayStartMin) * PX_PER_MIN
-                      const height = Math.max((clampedEnd - clampedStart) * PX_PER_MIN, isMobile ? 14 : 18)
+                      const naturalHeight = (clampedEnd - clampedStart) * PX_PER_MIN
+                      const height = forcedFullCell ? HOUR_HEIGHT : Math.max(naturalHeight, isMobile ? 14 : 18)
+                      
+                      // Assicura che il blocco non sfori la timeline
+                      const clampedTop = Math.min(top, timelineHeight - height)
                       
                       // Versione compatta per eventi bassi (soglia più bassa su mobile)
                       const compact = height < (isMobile ? 40 : 55)
@@ -522,7 +557,7 @@ export default function AdminCalendar() {
                             rounded-xl
                             ${apt.isPast ? 'grayscale brightness-75 cursor-not-allowed' : 'cursor-move hover:border-gold-400/50'}`}
                           style={{ 
-                            top, 
+                            top: clampedTop, 
                             height,
                             left: hasTwoSingles ? (index === 0 ? '0.5rem' : 'auto') : '0.5rem',
                             right: hasTwoSingles ? (index === 0 ? 'auto' : '0.5rem') : '0.5rem',
@@ -587,7 +622,7 @@ export default function AdminCalendar() {
     for (let h = 6; h < 14; h++) {
       hours.push({ hour: h, minute: 0 })
     }
-    // Dalle 15:30 in poi: ogni ora a partire da 15:30 fino a 22:30
+    // Dalle 15:30 in poi: ogni ora a partire da 15:30 fino a 22:30 (mostra anche 22:30 per completezza visiva)
     for (let h = 15; h < 23; h++) {
       hours.push({ hour: h, minute: 30 })
     }
@@ -595,7 +630,7 @@ export default function AdminCalendar() {
     const HOUR_HEIGHT = isMobile ? 40 : 60
     const PX_PER_MIN = HOUR_HEIGHT / 60
     const dayStartMin = 6 * 60 // Inizia alle 6:00
-    const dayEndMin = 22 * 60 + 30 // Termina alle 22:30
+    const dayEndMin = 22 * 60 + 30 // Termina alle 22:30 (mostra la cella completa)
     const totalMinutes = dayEndMin - dayStartMin
     const timelineHeight = totalMinutes * PX_PER_MIN
 
@@ -681,9 +716,10 @@ export default function AdminCalendar() {
                       const newHour = Math.floor(newMinutes / 60)
                       const newMinute = newMinutes % 60
                       
-                      // Valida l'orario (06:00-22:30)
-                      if (newHour < 6 || (newHour === 22 && newMinute > 30) || newHour >= 23) {
-                        alert('Orario non valido. Gli slot sono disponibili dalle 06:00 alle 22:30.')
+                      // Valida l'orario - usa i minuti calcolati, non l'ora arrotondata
+                      const rawMinutes = newHour * 60 + newMinute
+                      if (rawMinutes < 6 * 60 || rawMinutes > 23 * 60) {
+                        alert('Orario non valido. Gli slot sono disponibili dalle 06:00 alle 21:30.')
                         return
                       }
                       
@@ -700,16 +736,22 @@ export default function AdminCalendar() {
                       if (finalHour < 14) {
                         // Dalle 6 alle 13: solo :00
                         finalMinute = 0
-                      } else if (finalHour >= 15) {
-                        // Dalle 15:30 in poi: solo :30
-                        finalMinute = 30
-                        if (finalHour === 15 && finalMinute === 30) {
-                          // OK
-                        } else if (finalMinute < 30) {
-                          finalMinute = 30
-                        } else if (finalMinute > 30) {
+                        // Se i minuti originali erano > 30, siamo più vicini all'ora successiva
+                        if (newMinute > 30) {
                           finalHour += 1
-                          finalMinute = 30
+                        }
+                        // Clamp
+                        if (finalHour >= 14) {
+                          finalHour = 13
+                        }
+                      } else if (finalHour >= 15) {
+                        // Dalle 15:30 in poi: tutti gli slot sono a :30
+                        // Basta fissare il minuto a :30 (l'ora è già corretta dal calcolo Y)
+                        finalMinute = 30
+                        
+                        // Clamp al massimo 21:30 (ultimo slot prenotabile)
+                        if (finalHour > 21) {
+                          finalHour = 21
                         }
                       }
                       
@@ -717,7 +759,19 @@ export default function AdminCalendar() {
                       
                       if (newTime === currentTime) return
                       
-                      // Aggiorna l'appuntamento
+                      // OPTIMISTIC UPDATE - aggiorna subito la UI
+                      setBookings(prev => prev.map(b => {
+                        if (b.id === appointmentId) {
+                          return {
+                            ...b,
+                            date: new Date(dateStr).toISOString(),
+                            time: newTime,
+                          }
+                        }
+                        return b
+                      }))
+                      
+                      // Poi aggiorna il server in background (senza await bloccare la UI)
                       try {
                         const response = await fetch(`/api/admin/bookings/${appointmentId}`, {
                           method: 'PUT',
@@ -728,14 +782,15 @@ export default function AdminCalendar() {
                           }),
                         })
                         
-                        if (response.ok) {
-                          fetchBookings()
-                        } else {
+                        if (!response.ok) {
                           const data = await response.json()
                           alert(data.error || 'Errore nello spostamento dell\'appuntamento')
+                          fetchBookings() // Rollback: ricarica dallo stato reale
                         }
+                        // Se ok, NON chiamare fetchBookings() - la UI è già aggiornata
                       } catch (error) {
                         alert('Errore nello spostamento dell\'appuntamento')
+                        fetchBookings() // Rollback
                       }
                     }}
                   >
@@ -751,6 +806,11 @@ export default function AdminCalendar() {
                         />
                       )
                     })}
+                    {/* Linea finale per delimitare l'ultima cella (22:30) */}
+                    <div
+                      className="absolute left-0 right-0 border-t border-white/10 z-0"
+                      style={{ top: timelineHeight }}
+                    />
 
                     {/* Appuntamenti */}
                     {dayAppointments.map((apt) => {
@@ -765,8 +825,25 @@ export default function AdminCalendar() {
                         return null // Non mostrare appuntamenti nella pausa pranzo
                       }
 
-                      const top = (startMin - dayStartMin) * PX_PER_MIN
-                      const height = duration * PX_PER_MIN
+                      // Clamp l'appuntamento alla fine del calendario
+                      const clampedStart = Math.max(startMin, dayStartMin)
+                      let clampedEnd = Math.min(endMin, dayEndMin)
+                      if (clampedStart < lunchBreakStart && clampedEnd > lunchBreakStart) {
+                        clampedEnd = lunchBreakStart // Taglia alla pausa pranzo
+                      }
+                      
+                      // Se l'appuntamento inizia nell'ultima cella (22:30), assicurati che abbia l'altezza completa della cella
+                      let forcedFullCell = false
+                      if (clampedStart >= dayEndMin - 60) {
+                        forcedFullCell = true
+                      }
+
+                      const top = (clampedStart - dayStartMin) * PX_PER_MIN
+                      const naturalHeight = (clampedEnd - clampedStart) * PX_PER_MIN
+                      const height = forcedFullCell ? HOUR_HEIGHT : Math.max(naturalHeight, isMobile ? 14 : 18)
+                      
+                      // Assicura che il blocco non sfori la timeline
+                      const clampedTop = Math.min(top, timelineHeight - height)
 
                       // Controlla se ci sono più appuntamenti alla stessa ora
                       const sameTimeAppointments = dayAppointments.filter(
@@ -806,7 +883,7 @@ export default function AdminCalendar() {
                             rounded-xl
                             ${apt.isPast ? 'grayscale brightness-75 cursor-not-allowed' : 'cursor-move hover:border-gold-400/50'}`}
                           style={{ 
-                            top, 
+                            top: clampedTop, 
                             height,
                             left,
                             right,

@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   format, addDays, addMonths, addWeeks, subDays, subMonths, subWeeks,
   startOfDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   eachDayOfInterval, getDay, parseISO
 } from 'date-fns'
 import { it } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, X, Calendar, Clock } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import AppointmentDetailModal from '@/components/AppointmentDetailModal'
@@ -93,6 +94,13 @@ function formatAptTimeRange(apt: AptData): string {
   const duration = apt.durationMinutes || 60
   const endMins = Math.min(startMins + duration, DAY_END)
   return `${minsToTime(startMins)} - ${minsToTime(endMins)}`
+}
+
+/** Calcola orario di fine dato orario di inizio e durata */
+function calculateEndTime(startTime: string, durationMinutes: number): string {
+  const startMins = timeToMins(startTime)
+  const endMins = Math.min(startMins + durationMinutes, DAY_END)
+  return minsToTime(endMins)
 }
 
 /** Y → orario snappato e bookable (salta pausa pranzo, clamp 06:00-21:30) */
@@ -462,6 +470,7 @@ function AptBlock({
 export default function AdminCalendar() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
+  const [calendarError, setCalendarError] = useState<string | null>(null)
   const [view, setView] = useState<CalendarView>('day')
   const [currentDay, setCurrentDay] = useState(new Date())
   const [currentWeek, setCurrentWeek] = useState(new Date())
@@ -472,6 +481,16 @@ export default function AdminCalendar() {
   const [bookingModalOpen, setBookingModalOpen] = useState(false)
   const [prefilledDate, setPrefilledDate] = useState('')
   const [prefilledTime, setPrefilledTime] = useState('')
+  const [moveConfirmOpen, setMoveConfirmOpen] = useState(false)
+  const [pendingMove, setPendingMove] = useState<{
+    id: string
+    clientName: string
+    oldDate: string
+    oldTime: string
+    newDate: string
+    newTime: string
+    durationMinutes: number
+  } | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [nowMin, setNowMin] = useState(() => {
     const n = new Date(); return n.getHours() * 60 + n.getMinutes()
@@ -546,8 +565,19 @@ export default function AdminCalendar() {
 
   useEffect(() => { fetchBookings() }, [view, currentDay, currentWeek, currentMonth])
 
+  // Auto-dismiss error dopo 5 secondi
+  useEffect(() => {
+    if (calendarError) {
+      const timer = setTimeout(() => {
+        setCalendarError(null)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [calendarError])
+
   const fetchBookings = async () => {
     setLoading(true)
+    setCalendarError(null)
     try {
       let start: Date, end: Date
       if (view === 'day') {
@@ -564,6 +594,7 @@ export default function AdminCalendar() {
       if (res.ok) setBookings(await res.json())
     } catch (err) {
       console.error('Errore fetch:', err)
+      setCalendarError('Errore nel caricamento delle prenotazioni. Riprova più tardi.')
     } finally {
       setLoading(false)
     }
@@ -631,22 +662,68 @@ export default function AdminCalendar() {
   const applyDrop = async (id: string, dateStr: string, newTime: string) => {
     // Non permettere di spostare appuntamenti nel passato
     if (isPastTime(dateStr, newTime)) {
-      alert('Non puoi spostare un appuntamento nel passato.')
-      fetchBookings()
+      setCalendarError('Non puoi spostare un appuntamento nel passato.')
       return
     }
 
+    // Trova i dati dell'appuntamento per il modal di conferma
+    const booking = bookings.find(b => b.id === id)
+    if (!booking) return
+
+    const apt = apts.find(a => a.id === id)
+    if (!apt) return
+
+    // Mostra modal di conferma invece di applicare subito
+    setPendingMove({
+      id,
+      clientName: apt.client_name,
+      oldDate: apt.date,
+      oldTime: apt.time,
+      newDate: dateStr,
+      newTime,
+      durationMinutes: apt.durationMinutes,
+    })
+    setMoveConfirmOpen(true)
+  }
+
+  // ─── Conferma spostamento ──────────────────────────────────────────────────
+  const confirmMove = async () => {
+    if (!pendingMove) return
+
+    const { id, newDate, newTime } = pendingMove
+
+    // Update ottimistico
     setBookings(prev => prev.map(b =>
-      b.id === id ? { ...b, date: dateStr, time: newTime } : b
+      b.id === id ? { ...b, date: newDate, time: newTime } : b
     ))
+
     try {
       const res = await fetch(`/api/admin/bookings/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: dateStr, time: newTime }),
+        body: JSON.stringify({ date: newDate, time: newTime }),
       })
-      if (!res.ok) { alert((await res.json()).error || 'Errore spostamento'); fetchBookings() }
-    } catch { alert('Errore di rete'); fetchBookings() }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setCalendarError(data.error || 'Errore durante lo spostamento dell\'appuntamento.')
+        fetchBookings()
+      } else {
+        // Successo: nascondi eventuali errori precedenti
+        setCalendarError(null)
+      }
+    } catch {
+      setCalendarError('Errore di rete durante lo spostamento dell\'appuntamento.')
+      fetchBookings()
+    } finally {
+      setMoveConfirmOpen(false)
+      setPendingMove(null)
+    }
+  }
+
+  // ─── Annulla spostamento ───────────────────────────────────────────────────
+  const cancelMove = () => {
+    setMoveConfirmOpen(false)
+    setPendingMove(null)
   }
 
   // ─── Resize handler ───────────────────────────────────────────────────────
@@ -660,8 +737,15 @@ export default function AdminCalendar() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ durationMinutes: newDuration }),
       })
-      if (!res.ok) { alert((await res.json()).error || 'Errore resize'); fetchBookings() }
-    } catch { alert('Errore di rete'); fetchBookings() }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setCalendarError(data.error || 'Errore durante il salvataggio della durata.')
+        fetchBookings()
+      }
+    } catch {
+      setCalendarError('Errore di rete durante il salvataggio della durata.')
+      fetchBookings()
+    }
   }
 
   // ─── Render appuntamenti — layout stile Apple Calendar ──────────────────────
@@ -1050,6 +1134,18 @@ export default function AdminCalendar() {
   // ============================================================================
   return (
     <div className="space-y-2 md:space-y-4 calendar-container">
+      {calendarError && (
+        <div className="glass-card border border-red-500/60 bg-red-500/10 text-red-200 text-[11px] md:text-xs px-3 py-2 rounded-lg flex items-start justify-between gap-2">
+          <span>{calendarError}</span>
+          <button
+            type="button"
+            onClick={() => setCalendarError(null)}
+            className="text-[11px] md:text-xs text-red-300 hover:text-red-100 underline"
+          >
+            Chiudi
+          </button>
+        </div>
+      )}
       {/* Barra navigazione */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-2 md:gap-4">
         <div className="flex items-center gap-2 md:gap-3">
@@ -1112,6 +1208,99 @@ export default function AdminCalendar() {
         prefilledDate={prefilledDate}
         prefilledTime={prefilledTime}
       />
+
+      {/* Modal conferma spostamento */}
+      {moveConfirmOpen && pendingMove && (() => {
+        const oldEndTime = calculateEndTime(pendingMove.oldTime, pendingMove.durationMinutes)
+        const newEndTime = calculateEndTime(pendingMove.newTime, pendingMove.durationMinutes)
+        const oldDateFormatted = format(parseISO(pendingMove.oldDate), 'dd/MM/yyyy', { locale: it })
+        const newDateFormatted = format(parseISO(pendingMove.newDate), 'dd/MM/yyyy', { locale: it })
+        
+        return createPortal(
+          <div className="modal-overlay" onClick={cancelMove}>
+            <div
+              className="modal-content glass-card rounded-xl p-4 md:p-6 max-w-md w-[95vw]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h2 className="text-lg md:text-xl font-bold gold-text-gradient heading-font flex items-center gap-2">
+                    <Calendar className="w-5 h-5 md:w-6 md:h-6 text-[#D3AF37]" />
+                    Conferma Spostamento
+                  </h2>
+                  <p className="text-xs md:text-sm text-dark-600 mt-1">
+                    Verifica i dettagli prima di confermare
+                  </p>
+                </div>
+                <button
+                  onClick={cancelMove}
+                  className="text-gray-400 hover:text-white transition text-2xl md:text-3xl"
+                  aria-label="Chiudi"
+                >
+                  <X className="w-6 h-6 md:w-7 md:h-7" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs md:text-sm font-semibold text-gold-400 mb-2">Cliente</p>
+                  <p className="text-sm md:text-base text-white">{pendingMove.clientName}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs md:text-sm font-semibold text-gold-400 mb-2">Da</p>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs md:text-sm text-white">
+                        <Calendar className="w-3 h-3 md:w-4 md:h-4 text-gold-400" />
+                        {oldDateFormatted}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs md:text-sm text-white">
+                        <Clock className="w-3 h-3 md:w-4 md:h-4 text-gold-400" />
+                        {pendingMove.oldTime} - {oldEndTime}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs md:text-sm font-semibold text-gold-400 mb-2">A</p>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs md:text-sm text-white">
+                        <Calendar className="w-3 h-3 md:w-4 md:h-4 text-gold-400" />
+                        {newDateFormatted}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs md:text-sm text-white">
+                        <Clock className="w-3 h-3 md:w-4 md:h-4 text-gold-400" />
+                        {pendingMove.newTime} - {newEndTime}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-col md:flex-row justify-end gap-3">
+                <Button
+                  variant="ghost"
+                  size="md"
+                  onClick={cancelMove}
+                  className="w-full md:w-auto"
+                >
+                  Annulla
+                </Button>
+                <Button
+                  variant="gold"
+                  size="md"
+                  onClick={confirmMove}
+                  className="w-full md:w-auto"
+                >
+                  Conferma Spostamento
+                </Button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      })()}
     </div>
   )
 }

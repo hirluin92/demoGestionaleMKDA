@@ -323,7 +323,7 @@ function AptBlock({
 
   // ── Touch drag mobile ─────────────────────────────────────────────────────
   const onTouchStartBlock = (e: React.TouchEvent) => {
-    if (apt.isPast || !isMobile || !onTouchDrop) return
+    if (!isMobile || !onTouchDrop) return
 
     const touch = e.touches[0]
     didDrag.current  = false
@@ -404,7 +404,7 @@ function AptBlock({
 
   return (
     <div
-      draggable={!apt.isPast && !isMobile}
+      draggable={!isMobile}
       onDragStart={e => {
         if (isMobile) { e.preventDefault(); return }
         e.stopPropagation()
@@ -416,7 +416,7 @@ function AptBlock({
       className={`apt-block absolute overflow-hidden rounded-xl border
         backdrop-blur-sm shadow-lg
         ${apt.isPast
-          ? 'border-gold-400/15 grayscale brightness-60 cursor-not-allowed'
+          ? 'border-gold-400/15 grayscale brightness-60 cursor-move'
           : isDragging
             ? 'border-gold-400/80 opacity-40 scale-[0.98]'
             : 'border-gold-400/40 cursor-move hover:border-gold-400/70'
@@ -629,6 +629,13 @@ export default function AdminCalendar() {
 
   // ─── Logica comune drop ───────────────────────────────────────────────────
   const applyDrop = async (id: string, dateStr: string, newTime: string) => {
+    // Non permettere di spostare appuntamenti nel passato
+    if (isPastTime(dateStr, newTime)) {
+      alert('Non puoi spostare un appuntamento nel passato.')
+      fetchBookings()
+      return
+    }
+
     setBookings(prev => prev.map(b =>
       b.id === id ? { ...b, date: dateStr, time: newTime } : b
     ))

@@ -307,52 +307,23 @@ function getOrCreateGhost(): HTMLDivElement {
 }
 
 function AptBlock({
-  apt, top, height, left, right, width, zIndex, slotH, isMobile, onClickApt, onResizeEnd, onTouchDrop,
+  apt, top, height, left, right, width, zIndex, slotH, isMobile, onClickApt, onTouchDrop,
 }: {
   apt: AptData; top: number; height: number
   left: string; right: string; width: string
   zIndex?: number
   slotH: number; isMobile: boolean
   onClickApt: (a: AptData) => void
-  onResizeEnd: (id: string, newDuration: number) => void
   onTouchDrop?: (aptId: string, clientX: number, clientY: number) => void
 }) {
-  const [localH, setLocalH]     = useState(height)
   const [isDragging, setIsDragging] = useState(false)
-  const resizing  = useRef(false)
   const startY    = useRef(0)
-  const startH    = useRef(0)
   const longPress = useRef<ReturnType<typeof setTimeout> | null>(null)
   const didDrag   = useRef(false)
 
-  useEffect(() => setLocalH(height), [height])
-
-  // ── Resize (mouse desktop) ────────────────────────────────────────────────
-  const onResizeDown = (e: React.MouseEvent) => {
-    if (apt.isPast) return
-    e.preventDefault(); e.stopPropagation()
-    resizing.current = true
-    startY.current = e.clientY
-    startH.current = localH
-    const onMove = (ev: MouseEvent) => {
-      if (!resizing.current) return
-      const delta = Math.round((ev.clientY - startY.current) / slotH) * slotH
-      setLocalH(Math.max(slotH, startH.current + delta))
-    }
-    const onUp = (ev: MouseEvent) => {
-      resizing.current = false
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-      const delta = Math.round((ev.clientY - startY.current) / slotH) * slotH
-      onResizeEnd(apt.id, Math.round((Math.max(slotH, startH.current + delta) / slotH) * SLOT_MIN))
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
-  }
-
   // ── Touch drag mobile ─────────────────────────────────────────────────────
   const onTouchStartBlock = (e: React.TouchEvent) => {
-    if (apt.isPast || resizing.current || !isMobile || !onTouchDrop) return
+    if (apt.isPast || !isMobile || !onTouchDrop) return
 
     const touch = e.touches[0]
     didDrag.current  = false
@@ -435,7 +406,7 @@ function AptBlock({
     <div
       draggable={!apt.isPast && !isMobile}
       onDragStart={e => {
-        if (resizing.current || isMobile) { e.preventDefault(); return }
+        if (isMobile) { e.preventDefault(); return }
         e.stopPropagation()
         e.dataTransfer.setData('aptId', apt.id)
         e.dataTransfer.setData('aptTime', apt.time)
@@ -451,7 +422,7 @@ function AptBlock({
             : 'border-gold-400/40 cursor-move hover:border-gold-400/70'
         }`}
       style={{
-        top, height: localH, left, right, width,
+        top, height, left, right, width,
         zIndex: isDragging ? 5 : (zIndex ?? 10),
         background: apt.isPast
           ? 'rgba(212, 175, 55, 0.12)'
@@ -481,47 +452,6 @@ function AptBlock({
           )}
         </div>
       </div>
-      {!apt.isPast && (
-        <div
-          className="resize-handle absolute bottom-0 left-0 right-0 flex items-center justify-center group"
-          style={{ height: isMobile ? 20 : 12, cursor: 'ns-resize' }}
-          onMouseDown={onResizeDown}
-          onTouchStart={e => {
-            // Blocca il long-press drag del blocco padre
-            e.stopPropagation()
-            if (longPress.current) { clearTimeout(longPress.current); longPress.current = null }
-            if (apt.isPast) return
-            resizing.current = true
-            startY.current = e.touches[0].clientY
-            startH.current = localH
-            document.body.style.overflow = 'hidden'
-            document.body.style.touchAction = 'none'
-            const onMove = (ev: TouchEvent) => {
-              ev.preventDefault()
-              const delta = Math.round((ev.touches[0].clientY - startY.current) / slotH) * slotH
-              setLocalH(Math.max(slotH, startH.current + delta))
-            }
-            const onEnd = (ev: TouchEvent) => {
-              resizing.current = false
-              document.body.style.overflow = ''
-              document.body.style.touchAction = ''
-              document.removeEventListener('touchmove', onMove, { passive: false } as EventListenerOptions)
-              document.removeEventListener('touchend', onEnd)
-              document.removeEventListener('touchcancel', onEnd)
-              const delta = Math.round((ev.changedTouches[0].clientY - startY.current) / slotH) * slotH
-              onResizeEnd(apt.id, Math.round((Math.max(slotH, startH.current + delta) / slotH) * SLOT_MIN))
-            }
-            document.addEventListener('touchmove', onMove, { passive: false })
-            document.addEventListener('touchend', onEnd)
-            document.addEventListener('touchcancel', onEnd)
-          }}
-          onClick={e => e.stopPropagation()}
-        >
-          <div className={`rounded-full bg-gold-400/40 group-active:bg-gold-400/80 transition-colors
-            ${isMobile ? 'w-10 h-1' : 'w-8 h-0.5 group-hover:bg-gold-400/70'}`}
-          />
-        </div>
-      )}
     </div>
   )
 }
@@ -794,7 +724,6 @@ export default function AdminCalendar() {
           slotH={SH}
           isMobile={isMobile}
           onClickApt={showApt}
-          onResizeEnd={handleResizeEnd}
           onTouchDrop={isMobile ? handleTouchDrop : undefined}
         />
       )

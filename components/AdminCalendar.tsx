@@ -87,6 +87,14 @@ function timeToMins(t: string): number {
   return h * 60 + m
 }
 
+/** Formatta orario appuntamento come "HH:mm - HH:mm" */
+function formatAptTimeRange(apt: AptData): string {
+  const startMins = timeToMins(apt.time)
+  const duration = apt.durationMinutes || 60
+  const endMins = Math.min(startMins + duration, DAY_END)
+  return `${minsToTime(startMins)} - ${minsToTime(endMins)}`
+}
+
 /** Y → orario snappato e bookable (salta pausa pranzo, clamp 06:00-21:30) */
 function yToBookableTime(y: number, slotH: number): string {
   let snapped = snapMin(yToMin(y, slotH))
@@ -363,7 +371,7 @@ function AptBlock({
 
       // Mostra ghost
       const ghost = getOrCreateGhost()
-      ghost.innerHTML = `<span>${apt.client_name}</span><span style="font-weight:400;font-size:9px;color:rgba(255,255,255,0.7)">${apt.time} · ${apt.service}</span>`
+      ghost.innerHTML = `<span>${apt.client_name}</span><span style="font-weight:400;font-size:9px;color:rgba(255,255,255,0.7)">${formatAptTimeRange(apt)} · ${apt.service}</span>`
       ghost.style.width = '160px'
       ghost.style.left  = `${touch.clientX - 80}px`
       ghost.style.top   = `${touch.clientY - 30}px`
@@ -467,7 +475,7 @@ function AptBlock({
           : <div className="text-[10px] font-semibold text-white truncate">{apt.client_name}</div>
         }
         <div className="flex items-center gap-1 mt-0.5">
-          <span className="text-[9px] text-gray-400 truncate">{apt.time} · {apt.service}</span>
+          <span className="text-[9px] text-gray-400 truncate">{formatAptTimeRange(apt)} · {apt.service}</span>
           {apt.isMultiplePackage && (
             <span className="flex-shrink-0 text-[7px] text-gold-400 font-bold border border-gold-400/40 rounded px-0.5 leading-tight">1to2</span>
           )}
@@ -881,7 +889,7 @@ export default function AdminCalendar() {
                   >
                     <div>
                       <p className="font-semibold text-xs text-white">{a.client_name}</p>
-                      <p className="text-[10px] text-gray-400">{a.time} · {a.service}</p>
+                      <p className="text-[10px] text-gray-400">{formatAptTimeRange(a)} · {a.service}</p>
                     </div>
                   </div>
                 ))}

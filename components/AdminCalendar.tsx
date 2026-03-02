@@ -848,7 +848,7 @@ export default function AdminCalendar() {
             {dayApts.length} Appuntament{dayApts.length !== 1 ? 'i' : 'o'}
           </h3>
           <p className="text-[10px] md:text-xs text-gray-500 mt-0.5">
-            Click su slot vuoto per aggiungere · Trascina il bordo inferiore per ridimensionare
+            Click su slot vuoto per aggiungere · Trascina l&apos;appuntamento per spostarlo
           </p>
         </div>
 
